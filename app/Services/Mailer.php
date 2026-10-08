@@ -35,10 +35,9 @@ final class Mailer
                 'from' => $s['from_email'], 'from_name' => $s['from_name'], 'reply_to' => $s['reply_to'],
             ];
         }
-        $c = config('mail');
         return [
-            'host' => $c['host'], 'port' => (int) $c['port'], 'username' => $c['username'], 'password' => $c['password'],
-            'encryption' => $c['encryption'], 'from' => $c['from'], 'from_name' => $c['from_name'], 'reply_to' => '',
+            'host' => '', 'port' => 587, 'username' => '', 'password' => '',
+            'encryption' => 'tls', 'from' => '', 'from_name' => '', 'reply_to' => '',
         ];
     }
 

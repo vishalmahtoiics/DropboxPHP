@@ -8,10 +8,10 @@ $open = static fn (string $group, string $tab, array $fields) => '<form method="
     . '<input type="hidden" name="_tab" value="' . $tab . '"><input type="hidden" name="_fields" value="' . e(implode(',', $fields)) . '"><div class="card-body">';
 $close = '</div><div class="card-foot form-actions"><button class="btn btn-primary" type="submit">Save</button></div></form>';
 ?>
-<?= App\Core\View::partial('admin/partials/page-head', ['heading' => 'Website settings', 'sub' => 'Brand, header, footer, email and maintenance. Changes apply on the next page load — no rebuild.']) ?>
+<?= App\Core\View::partial('admin/partials/page-head', ['heading' => 'Website settings', 'sub' => 'Brand, header, footer, email, storage and system. Changes apply on the next page load — no rebuild.']) ?>
 <div data-tabs="settings">
     <div class="tabs" role="tablist">
-        <?php foreach (['general' => 'General', 'brand' => 'Brand & design', 'header' => 'Header', 'footer' => 'Footer', 'email' => 'Email', 'maintenance' => 'Maintenance'] as $k => $v): ?><button class="tab" type="button" role="tab" data-tab="<?= $k ?>"><?= $v ?></button><?php endforeach; ?>
+        <?php foreach (['general' => 'General', 'brand' => 'Brand & design', 'header' => 'Header', 'footer' => 'Footer', 'email' => 'Email', 'storage' => 'Media storage', 'maintenance' => 'Maintenance', 'system' => 'System'] as $k => $v): ?><button class="tab" type="button" role="tab" data-tab="<?= $k ?>"><?= $v ?></button><?php endforeach; ?>
     </div>
 
     <div class="tab-panel" id="general">
@@ -103,7 +103,7 @@ $close = '</div><div class="card-foot form-actions"><button class="btn btn-prima
     <div class="tab-panel" id="email" hidden>
         <?php if (!$mailConfigured): ?><div class="alert alert-warning"><span>Email is not set up yet, so lead notifications are not being sent.</span></div><?php endif; ?>
         <?= $open('email', 'email', ['is_enabled', 'notify_new_lead', 'notify_assignment', 'notify_submission', 'send_confirmation']) ?>
-            <?= Form::toggle('is_enabled', 'Send email using these settings', $email['is_enabled'], ['help' => 'Off = use the SMTP_* environment variables, if any.']) ?>
+            <?= Form::toggle('is_enabled', 'Send email using these settings', $email['is_enabled'], ['help' => 'Turn on once the SMTP details below are filled in.']) ?>
             <div class="grid grid-4">
                 <div class="span-2"><?= Form::input('host', 'SMTP host', $email['host'], ['placeholder' => 'smtp.gmail.com']) ?></div>
                 <?= Form::input('port', 'Port', $email['port'], ['type' => 'number']) ?>
@@ -136,14 +136,72 @@ $close = '</div><div class="card-foot form-actions"><button class="btn btn-prima
             <?= Form::toggle('maintenance_mode', 'Maintenance mode', $s['maintenance_mode'], ['help' => 'Visitors see a "back soon" page (HTTP 503, so search engines wait). Signed-in staff still see the site.']) ?>
             <?= Form::textarea('maintenance_message', 'Message', $s['maintenance_message'], ['rows' => 2]) ?>
         <?= $close ?>
+    </div>
+
+    <div class="tab-panel" id="storage" hidden>
+        <?= $open('storage', 'storage', []) ?>
+            <?= Form::select('driver', 'Store uploaded files on', ['local' => 'This server (default)', 's3' => 'Amazon S3', 'r2' => 'Cloudflare R2'], $storage['driver'], ['data' => ['field-name' => 'driver']]) ?>
+            <div class="grid grid-2" data-show-when='{"driver":["s3","r2"]}'>
+                <?= Form::input('bucket', 'Bucket', $storage['bucket']) ?>
+                <?= Form::input('region', 'Region', $storage['region'], ['placeholder' => 'us-east-1 (S3) · auto (R2)']) ?>
+                <div class="span-2"><?= Form::input('endpoint', 'Endpoint', $storage['endpoint'], ['placeholder' => 'https://<account-id>.r2.cloudflarestorage.com', 'help' => 'Required for R2. Leave blank for Amazon S3.']) ?></div>
+                <?= Form::input('access_key', 'Access key ID', $storage['access_key'], ['autocomplete' => 'off']) ?>
+                <?= Form::input('secret_key', 'Secret access key', '', ['type' => 'password', 'autocomplete' => 'new-password', 'placeholder' => $hasStorageSecret ? '•••••••• (saved — leave blank to keep)' : '', 'help' => 'Encrypted before it is stored.']) ?>
+                <div class="span-2"><?= Form::input('public_url', 'Public file address', $storage['public_url'], ['placeholder' => 'https://media.example.com', 'help' => 'The custom domain or CDN that serves the bucket.']) ?></div>
+                <?= Form::select('path_style', 'Address style', ['auto' => 'Automatic', 'on' => 'Path style', 'off' => 'Virtual host'], $storage['path_style']) ?>
+            </div>
+            <p class="help">Files already uploaded stay where they are; new uploads go to the chosen place.</p>
+        <?= $close ?>
+    </div>
+
+    <div class="tab-panel" id="system" hidden>
+        <?php $site = App\Core\Installation::read(); ?>
+        <form method="post" action="/admin/settings/system" class="card" data-guard><?= csrf_field() ?><div class="card-body">
+            <h2>Site</h2>
+            <?= Form::input('url', 'Website address', config('app.url'), ['help' => 'Change this when the site moves to a new domain.']) ?>
+            <?= Form::input('login_path', 'Admin sign-in address', ltrim((string) config('app.login_path'), '/'), ['prefix' => '/', 'help' => 'Keep it secret. Bookmark the new address before saving.']) ?>
+            <?= Form::select('timezone', 'Timezone', array_combine($timezones, $timezones), config('app.timezone')) ?>
+        </div><div class="card-foot form-actions"><button class="btn btn-primary" type="submit">Save</button></div></form>
+
+        <?= $open('website', 'system', []) ?>
+            <h2>Behind Cloudflare or a load balancer</h2>
+            <?= Form::input('trusted_proxies', 'Trusted proxy IPs', $s['trusted_proxies'], ['placeholder' => '173.245.48.1, 103.21.244.1', 'help' => 'Comma-separated. Only then are visitor IPs taken from the proxy headers, for rate limits and logs. Leave blank if unsure.']) ?>
+        <?= $close ?>
+
+        <div class="card"><div class="card-head"><h2>Cron job</h2></div><div class="card-body stack">
+            <p class="small">Publishes scheduled content, runs scheduled backups and cleans up. Add one of these in your hosting panel (cPanel → Cron Jobs), every 5 minutes:</p>
+            <label class="field"><span class="label">Command</span><input class="input code" readonly value="<?= e('cd ' . BASE_PATH . ' && php bin/console cron > /dev/null 2>&1') ?>"></label>
+            <label class="field"><span class="label">Or call this address</span><input class="input code" readonly value="<?= e(config('app.url') . '/cron/run?token=' . config('app.cron_secret')) ?>"><span class="help">Keep it private — it contains a secret token.</span></label>
+        </div></div>
+
+        <div class="card"><div class="card-head"><h2>Database updates</h2></div><div class="card-body row">
+            <?php if ($pendingMigrations): ?>
+                <span class="badge orange"><?= count($pendingMigrations) ?> pending</span>
+                <span class="small"><?= e(implode(', ', $pendingMigrations)) ?></span>
+                <form method="post" action="/admin/settings/system/migrate"><?= csrf_field() ?><button class="btn btn-primary btn-sm" type="submit">Apply updates</button></form>
+            <?php else: ?>
+                <span class="badge green">Up to date</span><span class="small muted">After uploading a new version of the code, apply any updates here. Take a backup first.</span>
+            <?php endif; ?>
+        </div></div>
+
+        <?php if ($isSuperAdmin): ?>
+        <form method="post" action="/admin/settings/system/key" class="card"><?= csrf_field() ?>
+            <div class="card-head"><h2>Encryption key</h2></div>
+            <div class="card-body stack">
+                <p class="small">Needed only to move the site to another server with its database. Store it in a password manager.</p>
+                <?= Form::input('password', 'Your password', '', ['type' => 'password', 'autocomplete' => 'current-password', 'required' => true]) ?>
+            </div>
+            <div class="card-foot form-actions"><button class="btn btn-secondary" type="submit">Show the key</button></div>
+        </form>
+        <?php endif; ?>
+
         <div class="card"><div class="card-head"><h2>Application</h2></div><div class="card-body">
             <dl class="dl small">
                 <dt>Version</dt><dd><?= e(config('app.version')) ?></dd>
                 <dt>PHP</dt><dd><?= e(PHP_VERSION) ?></dd>
-                <dt>Database</dt><dd><?= e((string) App\Core\DB::value('SELECT VERSION()')) ?></dd>
-                <dt>Environment</dt><dd><?= e(config('app.env')) ?><?= config('app.debug') ? ' — debug ON (turn off in production)' : '' ?></dd>
-                <dt>Site address</dt><dd><?= e(config('app.url')) ?></dd>
-                <dt>Storage</dt><dd><?= e(App\Services\Storage::driver()) ?></dd>
+                <dt>Database</dt><dd><?= e((string) App\Core\DB::value('SELECT VERSION()')) ?> · <?= e((string) config('database.database')) ?></dd>
+                <dt>Installed</dt><dd><?= e(isset($site['installed_at']) ? format_date((string) $site['installed_at']) : '—') ?></dd>
+                <dt>Media storage</dt><dd><?= e(App\Services\Storage::driver()) ?></dd>
             </dl>
         </div></div>
     </div>

@@ -26,6 +26,9 @@ final class DB
     {
         if (self::$pdo === null) {
             $c = config('database');
+            if ($c['database'] === '') {
+                throw new \RuntimeException('The site is not installed yet.');
+            }
             $dsn = $c['socket'] !== ''
                 ? sprintf('mysql:unix_socket=%s;dbname=%s;charset=%s', $c['socket'], $c['database'], $c['charset'])
                 : sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $c['host'], $c['port'], $c['database'], $c['charset']);

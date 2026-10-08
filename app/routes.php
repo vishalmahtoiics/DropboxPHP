@@ -181,6 +181,9 @@ return static function (Router $r): void {
 
     // Settings
     $r->get('/admin/settings', [Admin\SettingsController::class, 'index']);
+    $r->post('/admin/settings/system', [Admin\SettingsController::class, 'saveSystem']);
+    $r->post('/admin/settings/system/migrate', [Admin\SettingsController::class, 'migrate']);
+    $r->post('/admin/settings/system/key', [Admin\SettingsController::class, 'revealKey']);
     $r->post('/admin/settings/{group}', [Admin\SettingsController::class, 'save']);
     $r->post('/admin/settings/email/test', [Admin\SettingsController::class, 'testEmail']);
     $r->get('/admin/countries', [Admin\CountryController::class, 'index']);

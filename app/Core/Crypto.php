@@ -8,8 +8,8 @@ use RuntimeException;
 
 /**
  * Symmetric encryption (libsodium XChaCha20-Poly1305, authenticated) and keyed
- * hashing, both derived from the app key in config.php with domain separation
- * so one key never does two jobs.
+ * hashing, both derived from the site's encryption key (created by the
+ * installer) with domain separation so one key never does two jobs.
  */
 final class Crypto
 {
@@ -22,10 +22,7 @@ final class Crypto
             $raw = (string) base64_decode(substr($raw, 7), true);
         }
         if (strlen($raw) < 16) {
-            if (config('app.env') === 'production') {
-                throw new RuntimeException('The encryption key (app.key in config.php) is missing or too short. Run: php bin/console key:generate');
-            }
-            $raw = 'insecure-development-key-change-me';
+            throw new RuntimeException('The encryption key is missing. Open the website to run the installer.');
         }
         return hash_hmac('sha256', $purpose, $raw, true);
     }

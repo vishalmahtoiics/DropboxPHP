@@ -1,4 +1,5 @@
-/config.php
+/storage/installed.php
+/storage/install.lock
 /vendor/
 /storage/uploads/*
 /storage/logs/*
@@ -9,3 +10,4 @@
 /.phpunit.cache
 .DS_Store
 *.log
+!/storage/.htaccess

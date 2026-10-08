@@ -1,6 +1,6 @@
 # DropboxPHP
 
-A CMS and CRM for a Dropbox reseller website, written in plain **PHP 8.1+ and MySQL**. There is no Node, no Composer and no build step: upload the files, point the web root at `public/`, and run the migrations.
+A CMS and CRM for a Dropbox reseller website, written in plain **PHP 8.1+ and MySQL**. There is no Node, no Composer and no build step: upload the files, open the site, and the installer does the rest.
 
 It rebuilds every feature of the original Next.js / Prisma app (`wroffy-dev/gworkspace-dropbox`). The [feature map](#feature-map) below lists them.
 
@@ -10,67 +10,61 @@ It rebuilds every feature of the original Next.js / Prisma app (`wroffy-dev/gwor
 
 | | |
 |---|---|
-| PHP | 8.1 or newer (8.3 recommended). The extensions you need are `pdo_mysql`, `sodium`, `mbstring`, `fileinfo`, `curl`, `zip` and `dom`. All are standard on cPanel / Plesk hosts. |
+| PHP | 8.1 or newer (8.3 recommended). The extensions you need are `pdo_mysql`, `sodium`, `mbstring`, `fileinfo`, `curl`, `zip`, `dom` and `openssl`. The installer checks them. All are standard on cPanel / Plesk hosts. |
 | Database | MySQL 8+ or MariaDB 10.6+ (InnoDB, utf8mb4) |
 | Web server | Apache with `mod_rewrite` (cPanel), or nginx + PHP-FPM |
 
-## Configuration
+## Installation
 
-All settings live in one PHP file, **`config.php`**, in the project root. It starts as a copy of `config.sample.php`. There is no `.env` file. `config.php` holds the database password and the encryption key, so it is in `.gitignore` and the web server never serves it.
+There are no configuration files to edit and no terminal commands to run. The site installs itself from the browser.
 
-The main entries:
+1. **Create a database.** In your hosting panel (cPanel → **MySQL Databases**), create a database and a user, and add the user to the database with **ALL PRIVILEGES**.
+2. **Upload the files.**
+   - **Best:** point the domain's document root at the `public/` folder.
+   - **If you can't change the document root:** upload everything into `public_html`. The `.htaccess` files send requests into `public/` and refuse access to `app/`, `storage/` and the other private folders.
+3. **Open the website.** It goes straight to **`/install`**:
+   - checks the server (PHP version, extensions, writable folders);
+   - asks for the website address, the database details and your admin account;
+   - lets you choose the secret admin sign-in address and the timezone, and whether to add demo content.
+4. **Click Install.** The installer creates the tables and your admin account. It also generates the encryption key and the cron token itself. **Copy the encryption key it shows** into a password manager.
+5. **Sign in** at your sign-in address, scan the QR code with an authenticator app (MFA is mandatory) and save the recovery codes.
+6. **Set up the cron job.** Admin → Website settings → **System** shows the exact command and URL to copy.
 
-| Entry | What it is |
+Once installed, `/install` no longer exists.
+
+The installer saves the database login and the key in `storage/installed.php`. Nobody edits that file: it is git-ignored, has 0600 permissions, and is never served over the web.
+
+### Changing settings later
+
+Everything is in the admin panel:
+
+| What | Where |
 |---|---|
-| `app.url` | The site address, e.g. `https://www.example.com` |
-| `app.key` | Encryption key. `php bin/console key:generate` fills it in. **Keep a copy somewhere safe.** |
-| `app.login_path` | The secret sign-in URL (default `/auth-control-panel/admin`) |
-| `app.debug` | Keep `false` on a live site |
-| `app.trusted_proxies` | Cloudflare / load-balancer IPs, so rate limits see the real visitor IP |
-| `app.cron_secret` | Token for the HTTP cron URL. `key:generate` fills it in. |
-| `database.*` | MySQL host, database name, user and password |
-| `mail.*` | Starting SMTP settings. Admin → Website settings → Email overrides them. |
-| `storage.*` | `local` (default), or `s3` / `r2` with bucket and keys |
+| Website address, admin sign-in address, timezone | Website settings → **System** |
+| Cloudflare / load-balancer IPs (so rate limits see the real visitor IP) | Website settings → **System** |
+| The encryption key (Super Admin, after re-entering the password) | Website settings → **System** |
+| Database updates after uploading a new version | Website settings → **System** → Apply updates |
+| SMTP email | Website settings → **Email** |
+| Amazon S3 / Cloudflare R2 for uploads | Website settings → **Media storage** |
+| Brand, header, footer, maintenance mode | Website settings |
 
-## Quick start
+### Moving to a new server
 
-```bash
-php bin/console key:generate          # creates config.php from config.sample.php and fills in the key
-# edit config.php: app.url and the database section
-php bin/console migrate
-php bin/console db:seed               # markets, email templates, demo content; asks for the first admin
-php -S 127.0.0.1:8000 -t public public/index.php   # local development only
-```
-
-`db:seed` asks for the first administrator's email, name and password in the terminal. Add `--no-demo` to skip the demo pages. If you skip the admin prompt, run `php bin/console user:create` later.
-
-Then open `app.url` + `app.login_path`:
-
-1. Sign in.
-2. Scan the QR code with an authenticator app. MFA is mandatory.
-3. Save the recovery codes.
-
-## Deployment
-
-### Shared hosting (cPanel / Apache)
-
-Choose one of these:
-
-- **Best:** set the domain's document root to the `public/` folder.
-- **If you can't change the document root:** upload the whole project into the web root. The root `.htaccess` sends every request into `public/` and blocks `config.php`, `app/`, `storage/` and the rest.
-
-Then:
-
-1. Create the MySQL database and user in cPanel.
-2. In cPanel's Terminal (or over SSH), run `php bin/console key:generate`.
-3. Open `config.php` in File Manager and fill in `app.url` and the `database` section.
-4. Run `php bin/console migrate` and `php bin/console db:seed`.
-5. Make `storage/` writable by PHP (`chmod -R 775 storage`).
-6. Set up the cron job (see below).
+1. Copy the files and import the database.
+2. Delete `storage/installed.php` if it was copied.
+3. Open the site. The installer sees that the database already holds a site and asks for the **encryption key** instead of a new admin account. That key is what MFA secrets and stored passwords are locked with, so the installer refuses any other key.
 
 ### nginx + PHP-FPM
 
 `deploy/nginx.conf` is a ready-made server block. Only `public/index.php` can be executed, and dotfiles are never served.
+
+### Local development
+
+```bash
+php -S 127.0.0.1:8000 -t public public/index.php
+```
+
+Open http://127.0.0.1:8000. You get the same installer. On the built-in server, errors are shown in full.
 
 ## Cron
 
@@ -80,35 +74,36 @@ The cron run does three things:
 - cleans up expired sessions and rate-limit rows;
 - runs scheduled backups.
 
-Run it every 5 minutes, using either option:
+Run it every 5 minutes. Admin → Website settings → System shows both options, filled in for your server:
 
 ```cron
 */5 * * * * cd /path/to/dropboxphp && php bin/console cron > /dev/null 2>&1
 ```
 
-If the host has no CLI cron, call the HTTP endpoint instead. It needs `app.cron_secret` in `config.php`, at least 24 characters (`key:generate` creates one):
+If the host has no CLI cron, call the HTTP address instead. The installer creates its secret token:
 
 ```
-https://www.example.com/cron/run?token=YOUR_CRON_SECRET_FROM_CONFIG_PHP
+https://www.example.com/cron/run?token=<token shown in Admin → System>
 ```
 
-## Console
+## Console (optional)
+
+Nothing needs the terminal. These commands are there if you have SSH access, and they work once the site is installed:
 
 | Command | Purpose |
 |---|---|
-| `key:generate [--force] [--raw]` | Create `config.php` if missing and fill in the key and cron secret (`--raw` just prints a random secret) |
-| `migrate`, `migrate:status` | Apply or list database migrations |
-| `db:seed [--no-demo]` | Seed markets, templates and demo content; asks for the first admin |
-| `user:create` | Create a Super Admin interactively |
+| `migrate`, `migrate:status` | Apply or list database updates (same as the button in Admin → System) |
+| `db:seed [--no-demo]` | Re-create markets, email templates and demo content |
+| `user:create` | Create a Super Admin |
 | `user:reset-mfa [email]` | Reset a locked-out user's MFA |
 | `cron` | Run the scheduled jobs once |
-| `status` | Environment and configuration check |
+| `status` | Installation and database check |
 
 ## Tests
 
 ```bash
 php tests/run.php unit    # no database needed
-php tests/run.php         # + integration tests against "<database>_test" (it is wiped every run)
+php tests/run.php         # + integration tests against "<site database>_test" (wiped every run; install the site first)
 ```
 
 CI (`.github/workflows/ci.yml`) lints every file and runs both suites on PHP 8.1 and 8.3 against MySQL 8.4.
@@ -123,17 +118,17 @@ CI (`.github/workflows/ci.yml`) lints every file and runs both suites on PHP 8.1
 | XSS | All output is escaped with `e()`. Rich text goes through an allow-list DOM sanitiser, and URLs are scheme-checked. CSP uses per-request nonces: strict in the admin, `strict-dynamic` on the public site. |
 | CSRF | Every admin POST needs a synchroniser token. Public forms use signed HMAC tokens with a minimum fill time and a maximum age, plus a honeypot. |
 | Sessions | Cookies are HttpOnly, SameSite=Lax, Secure on HTTPS and in strict mode. Session IDs are regenerated at login and at MFA. Sessions are stored server-side, so they can be revoked (log out everywhere). |
-| Login | The login URL is hidden (`app.login_path`), and `/admin` returns 404 when you're not signed in. Passwords use Argon2id. Sign-in timing is constant whether or not the user exists. Login attempts are rate-limited per account and per IP. |
+| Login | The sign-in address is secret and chosen at install, and `/admin` returns 404 when you're not signed in. Passwords use Argon2id. Sign-in timing is constant whether or not the user exists. Login attempts are rate-limited per account and per IP. |
 | MFA | TOTP (RFC 6238) is mandatory for every staff user, with replay protection and hashed one-time recovery codes. |
 | Access control | Roles have a rank hierarchy and fine-grained permissions. Nobody can grant a role above their own. |
-| Secrets | Secrets saved in Settings (e.g. the SMTP password) are encrypted at rest with XChaCha20-Poly1305 (libsodium). Keys are derived from `app.key`. |
+| Secrets | Secrets saved in Settings (e.g. the SMTP password) are encrypted at rest with XChaCha20-Poly1305 (libsodium). Keys are derived from the site's encryption key, which the installer generates. |
 | Privacy | IP addresses are stored only as keyed HMAC hashes. Consent records can be withdrawn from the CRM. |
 | Uploads | File types are checked by their content (magic bytes), not their names. SVGs are scanned for scripts. Files are stored outside the web root and served with `nosniff` and a sandbox CSP. |
 | Exports | CSV exports are guarded against formula injection. |
 | Headers | HSTS (on HTTPS), X-Frame-Options, nosniff, Referrer-Policy and Permissions-Policy are sent. |
 | Audit | Every admin change is written to the audit log, with secrets scrubbed. |
 
-Keep `app.debug` set to `false` in production. **Back up `app.key`**: without it, encrypted settings and existing sessions can't be read.
+Error details are never shown on a live site. **Keep a copy of the encryption key** (shown by the installer, and in Admin → System). Without it, MFA secrets and stored passwords can't be read after a move to another server.
 
 ---
 
@@ -155,7 +150,7 @@ Keep `app.debug` set to `false` in production. **Back up `app.key`**: without it
 | SEO: meta, JSON-LD, sitemap, robots, SEO/AEO/GEO scoring | Admin → SEO; `/sitemap.xml`, `/robots.txt` |
 | Redirects, 404 log, URL registry | Admin → Redirects. Old slugs redirect automatically when a slug changes, and loops are refused. |
 | Marketing tags (GA4, GTM, Meta Pixel, …) behind a consent banner | Admin → Marketing |
-| Media library: local disk, Amazon S3 or Cloudflare R2 | Admin → Media; the `storage` section of `config.php` (SigV4 signing, no SDK) |
+| Media library: local disk, Amazon S3 or Cloudflare R2 | Admin → Media; Website settings → Media storage (SigV4 signing, no SDK) |
 | Email (SMTP) with editable templates | Settings → Email; built-in SMTP client |
 | Staff, roles and permissions; mandatory MFA | Admin → Staff / Roles |
 | Recycle bin, audit log | Admin → Trash / Audit |
@@ -172,8 +167,7 @@ app/Http       controllers (Admin, Site, Auth) and the form helpers
 database       migrations and the seeder
 views          PHP templates (admin, site, blocks, layouts)
 public         web root: index.php, assets
-storage        uploads, backups, logs, cache (not web-accessible)
+storage        uploads, backups, logs, cache, installed.php (never web-accessible)
 deploy         sample nginx config
-config         default settings (overridden by config.php)
 tests          dependency-free test runner and suites
 ```

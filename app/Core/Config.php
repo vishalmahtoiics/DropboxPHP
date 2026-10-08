@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace App\Core;
 
 /**
- * Reads config/*.php once and serves values by dot path ("app.url").
+ * Application settings, served by dot path ("app.url").
+ *
+ * There is no file for anyone to edit. The fixed values live here; the few
+ * that differ per site (address, database, encryption key) are written by the
+ * web installer and changed later from Admin → Website settings → System.
+ * Everything else is a database setting (App\Services\Settings).
  */
 final class Config
 {
@@ -37,54 +42,44 @@ final class Config
         self::$items = null;
     }
 
-    /**
-     * Defaults from config/*.php, overridden by the site's own config.php in
-     * the project root, then normalised (paths, URLs, sizes).
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private static function load(): array
     {
-        $items = [];
-        foreach (glob(BASE_PATH . '/config/*.php') ?: [] as $file) {
-            $items[basename($file, '.php')] = require $file;
-        }
-        $local = BASE_PATH . '/config.php';
-        if (is_file($local)) {
-            $site = require $local;
-            if (is_array($site)) {
-                foreach ($site as $group => $values) {
-                    $items[$group] = is_array($values) && is_array($items[$group] ?? null)
-                        ? array_replace($items[$group], $values)
-                        : $values;
-                }
-            }
-        }
-        return self::normalise($items);
-    }
-
-    /** @param array<string, mixed> $items @return array<string, mixed> */
-    private static function normalise(array $items): array
-    {
-        $app = &$items['app'];
-        $path = static function (string $value): string {
-            if ($value === '') {
-                return $value;
-            }
-            return str_starts_with($value, '/') || preg_match('#^[A-Za-z]:[\\\\/]#', $value)
-                ? rtrim($value, '/\\')
-                : BASE_PATH . '/' . trim($value, '/\\');
-        };
-        $app['url'] = rtrim((string) $app['url'], '/');
-        $app['login_path'] = '/' . trim((string) $app['login_path'], '/');
-        $app['media_path'] = '/' . trim((string) $app['media_path'], '/');
-        $app['upload_dir'] = $path((string) $app['upload_dir']);
-        $app['backup_dir'] = $path((string) $app['backup_dir']);
-        $app['max_upload_bytes'] = (int) round(((float) $app['max_upload_mb']) * 1024 * 1024);
-        $proxies = $app['trusted_proxies'];
-        $app['trusted_proxies'] = array_values(array_filter(array_map('trim', is_array($proxies) ? $proxies : explode(',', (string) $proxies))));
-        $app['debug'] = (bool) $app['debug'];
-        unset($app);
-        return $items;
+        $dev = PHP_SAPI === 'cli-server';
+        $site = Installation::read();
+        $db = (array) ($site['database'] ?? []);
+        return [
+            'app' => [
+                'name' => 'Dropbox Reseller',
+                'version' => '1.0.0',
+                'env' => $dev ? 'development' : 'production',
+                'debug' => $dev,
+                'url' => rtrim((string) ($site['url'] ?? ''), '/'),
+                'key' => (string) ($site['key'] ?? ''),
+                'timezone' => (string) ($site['timezone'] ?? 'Asia/Kolkata'),
+                'login_path' => '/' . trim((string) ($site['login_path'] ?? Installation::DEFAULT_LOGIN_PATH), '/'),
+                'cron_secret' => (string) ($site['cron_secret'] ?? ''),
+                'canonical_host_redirect' => true,
+                'upload_dir' => BASE_PATH . '/storage/uploads',
+                'backup_dir' => BASE_PATH . '/storage/backups',
+                'media_path' => '/media',
+                'max_upload_bytes' => 10 * 1024 * 1024,
+                'session' => [
+                    'name' => 'dbx_session',
+                    'lifetime' => 60 * 60 * 12,     // absolute lifetime of a signed-in session
+                    'idle' => 60 * 60 * 2,          // signed out after this long without a request
+                ],
+            ],
+            'database' => [
+                'host' => (string) ($db['host'] ?? 'localhost'),
+                'port' => (int) ($db['port'] ?? 3306),
+                'database' => (string) ($db['database'] ?? ''),
+                'username' => (string) ($db['username'] ?? ''),
+                'password' => (string) ($db['password'] ?? ''),
+                'socket' => (string) ($db['socket'] ?? ''),
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+            ],
+        ];
     }
 }

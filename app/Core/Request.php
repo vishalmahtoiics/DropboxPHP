@@ -193,9 +193,18 @@ final class Request
         return filter_var($remote, FILTER_VALIDATE_IP) ? $remote : '0.0.0.0';
     }
 
+    /** @var list<string> proxy IPs whose forwarding headers are believed */
+    private static array $trustedProxies = [];
+
+    /** Set from Admin → Website settings → System ("1.2.3.4, 5.6.7.8" or "*"). */
+    public static function trustProxies(string $list): void
+    {
+        self::$trustedProxies = array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', $list) ?: [])));
+    }
+
     private function fromTrustedProxy(): bool
     {
-        $trusted = (array) config('app.trusted_proxies', []);
+        $trusted = self::$trustedProxies;
         if ($trusted === []) {
             return false;
         }

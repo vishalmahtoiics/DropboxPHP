@@ -8,8 +8,8 @@ declare(strict_types=1);
  *   php tests/run.php            unit + integration
  *   php tests/run.php unit       unit tests only (no database needed)
  *
- * Integration tests use the database named by 'test_database' in the
- * 'database' section of config.php (default: "<database>_test"). It is wiped and migrated at the start of the run —
+ * Integration tests connect with the installed site's database login and use
+ * the database "<site database>_test". It is wiped and migrated at the start of the run —
  * never point it at real data.
  */
 
@@ -93,7 +93,11 @@ foreach (glob(__DIR__ . '/unit/*Test.php') ?: [] as $file) {
 }
 
 if ($suite !== 'unit') {
-    $db = (string) config('database.test_database', config('database.database') . '_test');
+    if (!App\Core\Installation::installed()) {
+        fwrite(STDERR, "Install the site first (open it in a browser) so the tests know the database login.\nRun with 'unit' to skip integration tests.\n");
+        exit(1);
+    }
+    $db = config('database.database') . '_test';
     Config::set('database.database', $db);
     DB::setPdo(null);
     try {
@@ -102,15 +106,8 @@ if ($suite !== 'unit') {
         fwrite(STDERR, "Cannot connect to the test database \"$db\": {$e->getMessage()}\nRun with 'unit' to skip integration tests.\n");
         exit(1);
     }
-    // Fresh schema every run.
-    DB::pdo()->exec('SET FOREIGN_KEY_CHECKS=0');
-    foreach (DB::column("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'") as $t) {
-        DB::pdo()->exec("DROP TABLE `$t`");
-    }
-    DB::pdo()->exec('SET FOREIGN_KEY_CHECKS=1');
-    App\Core\Migrator::migrate();
-    App\Core\Permissions::sync();
     require __DIR__ . '/integration/bootstrap.php';
+    fresh_test_database();
     foreach (glob(__DIR__ . '/integration/*Test.php') ?: [] as $file) {
         require $file;
     }

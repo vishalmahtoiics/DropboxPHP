@@ -386,3 +386,12 @@ details summary { cursor: pointer; color: var(--brand); margin: .5rem 0; }
 .icon-details summary::-webkit-details-marker { display: none; }
 .icon-details[open] .icon-picker { margin-top: .5rem; }
 .icon-current { display: inline-grid; place-items: center; min-width: 20px; }
+
+/* Installer */
+.install-wrap { max-width: 640px; }
+.install-step { font-size: 1rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--border); }
+.install-checks { margin: 1rem 0; font-size: .875rem; }
+.install-checks summary { cursor: pointer; font-weight: 600; }
+.check-list { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .2rem; }
+.check-list .ok { color: var(--success); }
+.check-list .bad { color: var(--danger); }

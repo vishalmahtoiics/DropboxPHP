@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Http\Controllers\InstallController;
 use App\Http\Controllers\Site\ErrorController;
 use App\Services\Attribution;
+use App\Services\Settings;
 use Throwable;
 
 /**
  * The request pipeline:
  *
- *   canonical host → session (admin/auth only) → CSRF → route → controller
- *     → error mapping → security headers → attribution cookies
+ *   installer (until installed) → canonical host → session (admin/auth only)
+ *     → CSRF → route → controller → error mapping → security headers
+ *     → attribution cookies
  */
 final class Kernel
 {
@@ -26,6 +29,9 @@ final class Kernel
         $media = (string) config('app.media_path', '/media');
         if ($path === $media || str_starts_with($path, $media . '/')) {
             return 'media';
+        }
+        if (!Installation::installed()) {
+            return 'admin';
         }
         if ($path === '/admin' || str_starts_with($path, '/admin/')
             || $path === config('app.login_path') || str_starts_with($path, '/auth/')
@@ -41,6 +47,13 @@ final class Kernel
         $surface = self::surface($request);
 
         try {
+            if (!Installation::installed()) {
+                $response = $this->installer($request);
+                Security::apply($response, $request, $surface);
+                return $response;
+            }
+            Request::trustProxies((string) Settings::get('website', 'trusted_proxies', ''));
+
             $canonical = $this->canonicalRedirect($request);
             if ($canonical !== null) {
                 return Response::redirect($canonical, 308);
@@ -75,13 +88,39 @@ final class Kernel
         return $response;
     }
 
+    /** Before installation only /install answers; everything else is sent there. */
+    private function installer(Request $request): Response
+    {
+        if ($request->path !== '/install') {
+            return Response::redirect('/install', 302)->header('Cache-Control', 'no-store');
+        }
+        try {
+            Session::start($request);
+            if (!$request->isPost()) {
+                return (new InstallController($request))->show();
+            }
+            if (!Csrf::verify($request)) {
+                Session::flash('error', 'The form expired. Please try again.');
+                return Response::redirect('/install', 303);
+            }
+            return (new InstallController($request))->submit();
+        } catch (ValidationException $e) {
+            return $this->validationResponse($request, $e);
+        } catch (Throwable $e) {
+            ErrorHandler::report($e);
+            Session::flash('error', 'Installation failed: ' . $e->getMessage());
+            return Response::redirect('/install', 303);
+        }
+    }
+
     private function validationResponse(Request $request, ValidationException $e): Response
     {
         if ($request->wantsJson()) {
             return Response::json(['ok' => false, 'error' => $e->getMessage(), 'fieldErrors' => $e->errors], 422);
         }
         $old = $request->body;
-        unset($old['_token'], $old['password'], $old['password_confirmation'], $old['current_password']);
+        unset($old['_token'], $old['password'], $old['password_confirmation'], $old['current_password'],
+            $old['db_pass'], $old['admin_password'], $old['admin_password_confirmation'], $old['existing_key']);
         Session::flash('_errors', $e->errors);
         Session::flash('_old', $old);
         Session::flash('error', $e->getMessage());
@@ -108,8 +147,7 @@ final class Kernel
     }
 
     /**
-     * Bare domain ↔ www, to the host named in APP_URL. Environment only, so it
-     * costs nothing on requests it does not apply to.
+     * Bare domain ↔ www, to the host of the site address recorded at install.
      */
     private function canonicalRedirect(Request $request): ?string
     {

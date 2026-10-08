@@ -6,7 +6,6 @@ namespace Database;
 
 use App\Cms\Blocks;
 use App\Cms\Design;
-use App\Core\Auth;
 use App\Core\DB;
 use App\Core\Migrator;
 use App\Core\Permissions;
@@ -17,7 +16,6 @@ use App\Services\EmailTemplates;
  *
  *  - permission catalogue and the four built-in roles
  *  - India (default, served from /) and the UAE (/ae)
- *  - the first administrator, asked for in the terminal when there is none yet
  *  - email templates
  *  - demo content when the site is empty (skip with --no-demo)
  */
@@ -26,14 +24,9 @@ final class Seeder
     /** @var callable(string): void */
     private $out;
 
-    /** @var (callable(string, bool): string)|null */
-    private $ask;
-
-    /** @param (callable(string, bool): string)|null $ask prompts for the first admin; null skips it */
-    public function __construct(callable $out, ?callable $ask = null, private readonly bool $demo = true)
+    public function __construct(callable $out, private readonly bool $demo = true)
     {
         $this->out = $out;
-        $this->ask = $ask;
     }
 
     public function run(): void
@@ -43,7 +36,6 @@ final class Seeder
         ($this->out)('Permissions and roles synced.');
 
         $this->countries();
-        $this->admin();
         EmailTemplates::seed();
         ($this->out)('Email templates ready.');
 
@@ -65,36 +57,6 @@ final class Seeder
             ]
         );
         ($this->out)('Markets: India (/) and UAE (/ae).');
-    }
-
-    private function admin(): void
-    {
-        $roleId = (int) DB::value("SELECT id FROM roles WHERE slug = 'super-admin'");
-        if (DB::value('SELECT COUNT(*) FROM users WHERE role_id = ? AND deleted_at IS NULL', [$roleId])) {
-            ($this->out)('Administrator already exists.');
-            return;
-        }
-        if ($this->ask === null) {
-            ($this->out)('No administrator yet. Run: php bin/console user:create');
-            return;
-        }
-        ($this->out)('Create the first administrator:');
-        for ($try = 0; $try < 3; $try++) {
-            $email = strtolower(trim(($this->ask)('  Email: ', false)));
-            $name = trim(($this->ask)('  Name: ', false)) ?: 'Administrator';
-            $password = ($this->ask)('  Password (10+ chars, upper + lower case and a number): ', true);
-            $error = filter_var($email, FILTER_VALIDATE_EMAIL) ? Auth::passwordError($password, $email) : 'Enter a valid email address.';
-            if ($error === null) {
-                DB::insert('users', [
-                    'email' => $email, 'name' => $name, 'password_hash' => Auth::hash($password),
-                    'role_id' => $roleId, 'status' => 'ACTIVE', 'password_changed_at' => now(),
-                ]);
-                ($this->out)("Administrator $email created. Sign in at " . config('app.url') . config('app.login_path'));
-                return;
-            }
-            ($this->out)('  ' . $error);
-        }
-        ($this->out)('No administrator created. Run: php bin/console user:create');
     }
 
     // --- demo content ----------------------------------------------------------

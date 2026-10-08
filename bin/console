@@ -6,13 +6,15 @@ declare(strict_types=1);
 /*
  * Command-line tasks. Run from the project root:
  *
- *   php bin/console key:generate        create config.php and fill in its key and cron secret
  *   php bin/console migrate             apply pending database migrations
- *   php bin/console db:seed [--no-demo] roles, permissions, markets, first admin, demo content
+ *   php bin/console db:seed [--no-demo] roles, permissions, markets, demo content
  *   php bin/console user:create         create a Super Admin interactively
  *   php bin/console user:reset-mfa      clear a user's authenticator (lost phone)
  *   php bin/console cron                run scheduled jobs (backups, publishing, cleanup)
  *   php bin/console status              environment and database check
+ *
+ * The site is installed from the browser (open it and follow /install); these
+ * commands work once that is done.
  */
 
 require dirname(__DIR__) . '/app/bootstrap.php';
@@ -42,39 +44,12 @@ $ask = static function (string $prompt, bool $hidden = false): string {
     return trim((string) fgets(STDIN));
 };
 
-switch ($command) {
-    case 'key:generate':
-        if (in_array('--raw', $args, true)) {
-            $out(bin2hex(random_bytes(32)));
-            break;
-        }
-        $file = BASE_PATH . '/config.php';
-        if (!is_file($file)) {
-            copy(BASE_PATH . '/config.sample.php', $file);
-            $out('config.php created from config.sample.php.');
-        }
-        $contents = (string) file_get_contents($file);
-        $force = in_array('--force', $args, true);
-        $fill = static function (string $name, string $value) use (&$contents, $force, $out): void {
-            $pattern = "/('" . $name . "'\\s*=>\\s*)'([^']*)'/";
-            if (!preg_match($pattern, $contents, $m)) {
-                $out("No '$name' entry found in config.php — add it to the 'app' section.");
-                return;
-            }
-            if ($m[2] !== '' && !$force) {
-                $out("'$name' is already set." . ($name === 'key' ? ' Use --force to replace it (stored secrets become unreadable).' : ''));
-                return;
-            }
-            $contents = (string) preg_replace($pattern, '${1}' . "'" . $value . "'", $contents, 1);
-            $out("'$name' written to config.php.");
-        };
-        $fill('key', 'base64:' . base64_encode(random_bytes(32)));
-        $fill('cron_secret', bin2hex(random_bytes(24)));
-        file_put_contents($file, $contents);
-        @chmod($file, 0600);
-        $out('Keep a copy of the key somewhere safe.');
-        break;
+if (!App\Core\Installation::installed() && !in_array($command, ['help', 'status'], true)) {
+    $out('The site is not installed yet. Open it in a browser to run the installer.');
+    exit(1);
+}
 
+switch ($command) {
     case 'migrate':
         $applied = Migrator::migrate(static fn (string $name) => $out("  applied  $name"));
         Permissions::sync();
@@ -88,8 +63,7 @@ switch ($command) {
 
     case 'db:seed':
         require BASE_PATH . '/database/Seeder.php';
-        $interactive = function_exists('stream_isatty') && stream_isatty(STDIN);
-        (new Seeder($out, $interactive ? $ask : null, !in_array('--no-demo', $args, true)))->run();
+        (new Seeder($out, !in_array('--no-demo', $args, true)))->run();
         break;
 
     case 'user:create':
@@ -137,8 +111,7 @@ switch ($command) {
         $out('PHP        ' . PHP_VERSION);
         $out('Env        ' . config('app.env') . (config('app.debug') ? ' (debug)' : ''));
         $out('URL        ' . config('app.url'));
-        $out('Config     ' . (is_file(BASE_PATH . '/config.php') ? 'config.php' : 'config.php MISSING (copy config.sample.php)'));
-        $out('Key        ' . (strlen((string) config('app.key')) >= 16 ? 'set' : 'MISSING (php bin/console key:generate)'));
+        $out('Installed  ' . (App\Core\Installation::installed() ? 'yes' : 'NO — open the site in a browser to install'));
         try {
             $out('Database   ' . DB::value('SELECT VERSION()'));
             $pending = Migrator::pending();
@@ -154,6 +127,6 @@ switch ($command) {
 
     default:
         $out('Usage: php bin/console <command>');
-        $out('  key:generate [--force|--show|--raw]   migrate   migrate:status   db:seed');
+        $out('  migrate   migrate:status   db:seed [--no-demo]');
         $out('  user:create   user:reset-mfa <email>   cron   status');
 }

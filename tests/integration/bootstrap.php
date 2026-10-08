@@ -9,8 +9,24 @@ use App\Core\Session;
 
 App\Services\Mailer::$fake = true;
 
-DB::query("INSERT INTO countries (name, code, slug, currency, currency_symbol, is_default, is_active, is_published, settings) VALUES
-    ('India', 'IN', '', 'INR', '₹', 1, 1, 1, '{}'), ('UAE', 'AE', 'ae', 'AED', 'AED ', 0, 1, 1, '{}')");
+function drop_all_tables(): void
+{
+    DB::pdo()->exec('SET FOREIGN_KEY_CHECKS=0');
+    foreach (DB::column("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'") as $t) {
+        DB::pdo()->exec("DROP TABLE `$t`");
+    }
+    DB::pdo()->exec('SET FOREIGN_KEY_CHECKS=1');
+}
+
+/** Empty schema with the two markets the tests expect. */
+function fresh_test_database(): void
+{
+    drop_all_tables();
+    App\Core\Migrator::migrate();
+    App\Core\Permissions::sync();
+    DB::query("INSERT INTO countries (name, code, slug, currency, currency_symbol, is_default, is_active, is_published, settings) VALUES
+        ('India', 'IN', '', 'INR', '₹', 1, 1, 1, '{}'), ('UAE', 'AE', 'ae', 'AED', 'AED ', 0, 1, 1, '{}')");
+}
 
 /** Create a staff user with a role and sign them in (MFA verified). */
 function sign_in_as(string $roleSlug, string $email = ''): array

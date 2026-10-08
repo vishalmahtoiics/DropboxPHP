@@ -74,6 +74,7 @@ final class Settings
             'header_show_markets' => ['b', true],
             'maintenance_mode' => ['b', false],
             'maintenance_message' => ['t', 'We are making a few improvements and will be back shortly.'],
+            'trusted_proxies' => ['s', ''],
         ],
         'footer' => [
             'about' => ['t', 'Authorised Dropbox reseller helping teams buy, deploy and manage Dropbox.'],
@@ -150,6 +151,16 @@ final class Settings
             'hour' => ['i', 2],
             'retention' => ['i', 7],
             'include_media' => ['b', true],
+        ],
+        'storage' => [
+            'driver' => ['s', 'local'],
+            'bucket' => ['s', ''],
+            'region' => ['s', ''],
+            'endpoint' => ['u', ''],
+            'access_key' => ['s', ''],
+            'secret_key' => ['x', ''],
+            'public_url' => ['u', ''],
+            'path_style' => ['s', 'auto'],
         ],
         'product' => [
             'base_path' => ['s', 'products'],

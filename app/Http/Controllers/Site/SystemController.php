@@ -41,7 +41,7 @@ final class SystemController extends Controller
 
     /**
      * HTTP cron trigger for hosts without a real crontab:
-     *   https://site/cron/run?token=<cron_secret from config.php>  (every 5–15 minutes)
+     *   https://site/cron/run?token=<token shown in Admin → System>  (every 5–15 minutes)
      * Prefer `php bin/console cron` from crontab where available.
      */
     public function cron(): Response
