@@ -26,3 +26,15 @@ $router = new Router();
 (require dirname(__DIR__) . '/app/routes.php')($router);
 
 (new Kernel($router))->handle(Request::capture())->send();
+
+// Notifications and other follow-up work run after the visitor has their
+// response, so a slow mail server never slows a form submission.
+if (function_exists('fastcgi_finish_request')) {
+    fastcgi_finish_request();
+} elseif (function_exists('litespeed_finish_request')) {
+    litespeed_finish_request();
+} else {
+    @ob_flush();
+    @flush();
+}
+App\Services\LeadCapture::runDeferred();

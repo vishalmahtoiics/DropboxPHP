@@ -32,7 +32,7 @@ final class ErrorController extends Controller
                     'title' => 'Page not found',
                     'heading' => 'We could not find that page',
                     'message' => 'The page may have moved, or the address may be mistyped.',
-                    'seo' => ['title' => 'Page not found', 'robots' => 'noindex, follow'],
+                    'seo' => \App\Services\Seo::meta(['title' => 'Page not found', 'noindex' => true]),
                 ], 'layouts/site');
                 return Response::html($html, 404)->header('X-Robots-Tag', 'noindex');
             }

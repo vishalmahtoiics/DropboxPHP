@@ -31,6 +31,16 @@ final class Response
         );
     }
 
+    /** Stream a file from disk instead of holding it in memory. */
+    public static function file(string $path, array $headers = []): self
+    {
+        $r = new self('', 200, $headers);
+        $r->file = $path;
+        return $r;
+    }
+
+    public ?string $file = null;
+
     public static function text(string $body, int $status = 200, string $type = 'text/plain'): self
     {
         return new self($body, $status, ['Content-Type' => $type . '; charset=utf-8']);
@@ -87,6 +97,10 @@ final class Response
             foreach ($this->cookies as [$name, $value, $options]) {
                 setcookie($name, $value, $options);
             }
+        }
+        if ($this->file !== null) {
+            readfile($this->file);
+            return;
         }
         echo $this->body;
     }

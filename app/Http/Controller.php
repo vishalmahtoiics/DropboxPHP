@@ -45,7 +45,7 @@ abstract class Controller
     }
 
     /** @param array<string, mixed> $data */
-    protected function render(string $template, array $data = [], ?string $layout = null): Response
+    protected function view(string $template, array $data = [], ?string $layout = null): Response
     {
         return Response::html(View::render($template, $data, $layout));
     }
