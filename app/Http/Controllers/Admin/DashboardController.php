@@ -16,7 +16,7 @@ final class DashboardController extends AdminController
     public function index(): Response
     {
         if (!Auth::can('dashboard.view')) {
-            return $this->page('welcome', ['title' => 'Welcome']);
+            return $this->screen('welcome', ['title' => 'Welcome']);
         }
         $cid = (int) Countries::adminCurrent()['id'];
         $stats = [
@@ -60,7 +60,7 @@ final class DashboardController extends AdminController
                AND status NOT IN ('WON','LOST','SPAM') ORDER BY follow_up_at LIMIT 6",
             [$cid]
         ) : [];
-        return $this->page('dashboard', compact('stats', 'series', 'sources', 'statusCounts', 'recent', 'followUps') + ['title' => 'Dashboard']);
+        return $this->screen('dashboard', compact('stats', 'series', 'sources', 'statusCounts', 'recent', 'followUps') + ['title' => 'Dashboard']);
     }
 
     public function switchCountry(): Response
@@ -110,6 +110,6 @@ final class DashboardController extends AdminController
                 }
             }
         }
-        return $this->page('search', ['title' => 'Search', 'q' => $q, 'results' => $results]);
+        return $this->screen('search', ['title' => 'Search', 'q' => $q, 'results' => $results]);
     }
 }

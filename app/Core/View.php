@@ -40,7 +40,7 @@ final class View
         if ($layout === null) {
             return $content;
         }
-        return self::partial($layout, $data + ['content' => $content]);
+        return self::partial($layout, ['content' => $content] + $data);
     }
 
     /** @param array<string, mixed> $data */

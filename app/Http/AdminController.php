@@ -58,7 +58,7 @@ abstract class AdminController extends Controller
     }
 
     /** @param array<string, mixed> $data */
-    protected function page(string $template, array $data = []): Response
+    protected function screen(string $template, array $data = []): Response
     {
         return Response::html(View::render('admin/' . $template, $data, 'layouts/admin'));
     }
