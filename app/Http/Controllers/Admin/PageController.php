@@ -257,6 +257,41 @@ final class PageController extends AdminController
         return $this->redirect('/admin/pages');
     }
 
+    /**
+     * Copy a page to another market as a draft. If the address is free there it
+     * keeps it; otherwise a "-copy" suffix is added. The copy is independent.
+     */
+    public function copyToMarket(string $id): Response
+    {
+        $this->authorize('pages.create');
+        $page = $this->find($this->id($id));
+        $target = $this->request->int('country_id');
+        Countries::assertAccess($target);
+        if ($target === (int) $page['country_id']) {
+            throw ValidationException::with('country_id', 'Choose a different market.');
+        }
+        $newId = DB::transaction(function () use ($page, $target): int {
+            $copy = $page;
+            unset($copy['id'], $copy['created_at'], $copy['updated_at']);
+            $copy['country_id'] = $target;
+            $copy['status'] = 'DRAFT';
+            $copy['published_at'] = null;
+            $copy['city_id'] = null;
+            $copy['generated_from_id'] = $page['id'];
+            $copy['slug'] = $page['slug'] === '' && !DB::value("SELECT id FROM pages WHERE country_id = ? AND slug = ''", [$target])
+                ? '' : Slugs::unique('pages', $page['slug'] === '' ? 'home' : $page['slug'], null, ['country_id' => $target]);
+            $copy['created_by_id'] = $this->me['id'];
+            $copy['updated_by_id'] = $this->me['id'];
+            $newId = DB::insert('pages', $copy);
+            self::copySections((int) $page['id'], $newId);
+            return $newId;
+        });
+        Audit::record('copied', 'Page', $newId, 'Copied "' . $page['title'] . '" to ' . (Countries::find($target)['name'] ?? $target));
+        \App\Core\Session::put('admin_country_id', $target);
+        $this->flash('Copied as a draft. You are now working in ' . (Countries::find($target)['name'] ?? 'that market') . '.');
+        return $this->redirect('/admin/pages/' . $newId);
+    }
+
     public static function copySections(int $fromPage, int $toPage): void
     {
         foreach (DB::all('SELECT * FROM page_sections WHERE page_id = ? ORDER BY sort_order', [$fromPage]) as $s) {

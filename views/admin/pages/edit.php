@@ -97,6 +97,14 @@ if (can('pages.publish') && $p['status'] !== 'PUBLISHED') {
             </div>
             <?php if ($canEdit): ?><div class="card-foot form-actions"><button class="btn btn-primary" type="submit">Save settings</button></div><?php endif; ?>
         </form>
+        <?php $others = array_filter(App\Services\Countries::accessible(), static fn ($c) => (int) $c['id'] !== (int) $p['country_id']); ?>
+        <?php if ($others && can('pages.create')): ?>
+        <form class="card" method="post" action="/admin/pages/<?= (int) $p['id'] ?>/copy-to-market"><div class="card-head"><h2>Copy to another market</h2></div>
+            <div class="card-body row"><?= csrf_field() ?>
+                <select class="select" name="country_id" style="width:auto"><?php foreach ($others as $o): ?><option value="<?= (int) $o['id'] ?>"><?= e($o['name']) ?></option><?php endforeach; ?></select>
+                <button class="btn btn-secondary" type="submit">Copy as draft</button>
+                <span class="help">The copy is independent: later edits here do not change it.</span></div></form>
+        <?php endif; ?>
     </div>
 
     <div class="tab-panel" id="seo" hidden>

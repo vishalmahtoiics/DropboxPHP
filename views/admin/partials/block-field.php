@@ -94,10 +94,11 @@ $selectOptions = match ($type) {
     <div class="field" data-icon-field<?= $show ?>>
         <span class="label"><?= e($label) ?></span>
         <input type="hidden" <?= $nameAttr ?> value="<?= e((string) $value) ?>">
-        <div class="icon-picker" style="max-height:132px">
+        <details class="icon-details"><summary><span class="icon-current" data-icon-current><?= $value ? Icons::svg((string) $value, 'icon', 18) : '—' ?></span> <span class="small">Change icon</span></summary>
+        <div class="icon-picker" style="max-height:180px">
             <button type="button" data-icon-choice=""<?= $value === '' ? ' class="selected"' : '' ?> title="None">—</button>
             <?php foreach (App\Cms\Icons::names() as $icon): ?><button type="button" data-icon-choice="<?= e($icon) ?>" title="<?= e($icon) ?>"<?= $icon === $value ? ' class="selected"' : '' ?>><?= Icons::svg($icon, 'icon', 18) ?></button><?php endforeach; ?>
-        </div>
+        </div></details>
     </div>
 <?php elseif ($type === 'image'): ?>
     <label class="field"<?= $show ?>><span class="label"><?= e($label) ?></span>

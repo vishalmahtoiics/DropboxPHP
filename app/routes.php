@@ -50,6 +50,7 @@ return static function (Router $r): void {
     $r->post('/admin/pages/{id}/delete', [Admin\PageController::class, 'destroy']);
     $r->post('/admin/pages/{id}/duplicate', [Admin\PageController::class, 'duplicate']);
     $r->post('/admin/pages/{id}/status', [Admin\PageController::class, 'status']);
+    $r->post('/admin/pages/{id}/copy-to-market', [Admin\PageController::class, 'copyToMarket']);
     $r->post('/admin/pages/{id}/sections', [Admin\SectionController::class, 'store']);
     $r->post('/admin/pages/{id}/sections/reorder', [Admin\SectionController::class, 'reorder']);
     $r->get('/admin/sections/{id}', [Admin\SectionController::class, 'edit']);
@@ -126,6 +127,7 @@ return static function (Router $r): void {
     $r->post('/admin/leads/{id}/activity', [Admin\LeadController::class, 'activity']);
     $r->post('/admin/leads/{id}/convert', [Admin\LeadController::class, 'convert']);
     $r->post('/admin/leads/{id}/delete', [Admin\LeadController::class, 'destroy']);
+    $r->post('/admin/leads/{id}/consent', [Admin\LeadController::class, 'consent']);
     $r->get('/admin/pipeline', [Admin\PipelineController::class, 'index']);
     $r->post('/admin/pipeline/move', [Admin\PipelineController::class, 'move']);
     $r->get('/admin/customers', [Admin\CustomerController::class, 'index']);

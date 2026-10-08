@@ -253,6 +253,22 @@ final class LeadController extends AdminController
         return $this->redirect('/admin/leads/' . $lead['id'] . '#timeline');
     }
 
+    /** Record a withdrawal of marketing (or all) consent, kept as evidence. */
+    public function consent(string $id): Response
+    {
+        $this->authorize('leads.manageConsent');
+        $lead = $this->find($this->id($id));
+        $scope = $this->request->str('scope') === 'all' ? 'all' : 'marketing';
+        DB::transaction(static function () use ($lead, $scope): void {
+            DB::update('leads', ['marketing_consent' => 0], ['id' => $lead['id']]);
+            DB::query('UPDATE consent_records SET withdrawn_at = NOW() WHERE lead_id = ? AND withdrawn_at IS NULL' . ($scope === 'marketing' ? ' AND marketing_consent = 1' : ''), [$lead['id']]);
+            Leads::activity((int) $lead['id'], 'UPDATED', $scope === 'all' ? 'All consent withdrawn' : 'Marketing consent withdrawn');
+        });
+        Audit::record('consent-withdrawn', 'Lead', $lead['id'], $scope);
+        $this->flash('Withdrawal recorded. The original consent records are kept as evidence.');
+        return $this->redirect('/admin/leads/' . $lead['id']);
+    }
+
     public function convert(string $id): Response
     {
         $this->authorizeAny(['customers.create']);

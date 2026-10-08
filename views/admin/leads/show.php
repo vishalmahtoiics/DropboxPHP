@@ -84,7 +84,7 @@ if (can('leads.delete')) {
             </dl>
         </div></div>
         <?php if ($consents): ?>
-        <div class="card"><div class="card-head"><h2>Consent records</h2></div><div class="card-body small">
+        <div class="card"><div class="card-head"><h2>Consent records</h2><?php if (can('leads.manageConsent')): ?><?= Form::action('/admin/leads/' . $l['id'] . '/consent', 'Record withdrawal', 'btn btn-ghost btn-xs', 'Record that this person withdrew their marketing consent?') ?><?php endif; ?></div><div class="card-body small">
             <?php foreach ($consents as $c): ?>
                 <p><strong><?= e(format_datetime($c['created_at'])) ?></strong> — enquiry <?= $c['enquiry_consent'] ? '✓' : '✗' ?>, marketing <?= $c['marketing_consent'] ? '✓' : '✗' ?>, terms <?= $c['terms_accepted'] ? '✓' : '✗' ?> · <?= e(strtolower(str_replace('_', ' ', $c['lawful_basis']))) ?><?php if ($c['notice_text']): ?><br><span class="muted">“<?= e(strip_tags($c['notice_text'])) ?>”</span><?php endif; ?><?php if ($c['withdrawn_at']): ?><br><span class="badge red">Withdrawn <?= e(format_date($c['withdrawn_at'])) ?></span><?php endif; ?></p>
             <?php endforeach; ?>

@@ -204,6 +204,9 @@
     const wrap = b.closest('[data-icon-field]');
     $('input', wrap).value = b.dataset.iconChoice;
     $$('[data-icon-choice]', wrap).forEach((x) => x.classList.toggle('selected', x === b));
+    const cur = $('[data-icon-current]', wrap);
+    if (cur) cur.innerHTML = b.dataset.iconChoice ? b.innerHTML : '—';
+    const det = b.closest('details'); if (det) det.open = false;
   });
 
   // --- rich text editor ----------------------------------------------------------------

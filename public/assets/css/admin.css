@@ -136,6 +136,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 1.25rem 0; }
 .card-head h2, .card-head h3 { margin: 0; font-size: 1rem; }
 .card-foot { padding: .9rem 1.25rem; border-top: 1px solid var(--border); background: var(--surface-2); border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
 .card + .card { margin-top: 1rem; }
+.grid > .card + .card, .grid > * > .card:first-child, .builder > .card + .card, .builder > form.card + .card { margin-top: 0; }
 .stat { padding: 1.1rem 1.25rem; display: flex; gap: .9rem; align-items: flex-start; }
 .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-50); color: var(--brand); flex-shrink: 0; }
 .stat-icon.green { background: var(--success-50); color: var(--success); }
@@ -381,3 +382,7 @@ details summary { cursor: pointer; color: var(--brand); margin: .5rem 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 @media (prefers-reduced-transparency: reduce) { .sidebar, .topbar, .card.glass { backdrop-filter: none; background: var(--surface); } }
+.icon-details summary { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .6rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); list-style: none; margin: 0; }
+.icon-details summary::-webkit-details-marker { display: none; }
+.icon-details[open] .icon-picker { margin-top: .5rem; }
+.icon-current { display: inline-grid; place-items: center; min-width: 20px; }
