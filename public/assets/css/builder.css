@@ -176,3 +176,4 @@
 [data-bx-settings-fields] .prefix-group { display: flex; }
 [data-bx-settings-fields] .prefix-group span { display: inline-flex; align-items: center; padding: 0 8px; background: var(--surface-2, #f1f5f9); border: 1px solid var(--border); border-right: 0; border-radius: 6px 0 0 6px; color: var(--muted); font-size: .8rem; white-space: nowrap; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
 [data-bx-settings-fields] .prefix-group .input { border-radius: 0 6px 6px 0; }
+.bx-menu-item:disabled { opacity: .4; cursor: default; background: none; }

@@ -65,6 +65,45 @@
     if (e.target.matches('[data-autosubmit]')) e.target.form.submit();
   });
 
+  // --- copy a section, paste it on any page (shared with the visual builder) -----------
+  const readClip = () => { try { return JSON.parse(localStorage.getItem('bx-clipboard') || 'null'); } catch (e) { return null; } };
+  const showPaste = () => {
+    const clip = readClip();
+    $$('[data-section-paste]').forEach((b) => { b.hidden = !clip; });
+  };
+  showPaste();
+  window.addEventListener('storage', (e) => { if (e.key === 'bx-clipboard') showPaste(); });
+  document.addEventListener('click', async (e) => {
+    const copyBtn = e.target.closest('[data-section-copy]');
+    if (copyBtn) {
+      e.preventDefault();
+      try {
+        const res = await fetch(copyBtn.dataset.sectionCopy, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        const json = await res.json();
+        if (!res.ok || !json.ok) throw new Error(json.error || 'Could not copy');
+        localStorage.setItem('bx-clipboard', JSON.stringify(json.element));
+        showPaste();
+        toast('Section copied. Open any page and choose Paste section (or Ctrl+V in the builder).');
+      } catch (err) { toast(err.message, 'error'); }
+    }
+    const pasteBtn = e.target.closest('[data-section-paste]');
+    if (pasteBtn) {
+      e.preventDefault();
+      const element = readClip();
+      if (!element) { toast('Copy a section first.', 'error'); return; }
+      try {
+        const res = await fetch(pasteBtn.dataset.sectionPaste, {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf() },
+          body: JSON.stringify({ element }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || !json || !json.ok) throw new Error((json && json.error) || 'Could not paste');
+        location.reload();
+      } catch (err) { toast(err.message, 'error'); }
+    }
+  });
+
   // Confirm destructive actions: <form data-confirm="Delete this page?">
   document.addEventListener('submit', (e) => {
     const form = e.target;

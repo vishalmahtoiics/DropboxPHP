@@ -89,7 +89,9 @@ Pages and product pages can be designed visually, in the style of Elementor:
 - **Responsive editing:** switch the canvas between desktop, tablet (≤1024px) and mobile (≤767px). Settings marked with the device icon are stored separately for each size.
 - **Editing tools:**
   - drag widgets from the panel onto the page, and drag elements by their handle to move them;
-  - the right-click menu: duplicate, copy/paste (works across pages), delete, select parent, save as template;
+  - the right-click menu: duplicate, copy, paste, **paste style** (another element's look, not its content), delete, select parent, save as template;
+  - **copy and paste across pages**, like Elementor: copy a container or widget on one page, open another page (or a product or template) and paste it with right-click → Paste or Ctrl+V. Right-clicking empty space also offers Paste. The clipboard lives in this browser, so it works between tabs too;
+  - sections of the **classic editor** copy the same way: ⋯ → *Copy*, then *Paste section* on any page. A classic section pastes into the builder, and anything from the builder made of ready-made sections pastes into the classic editor;
   - a navigator tree that can also be reordered by dragging;
   - undo/redo and keyboard shortcuts (Ctrl+Z / Ctrl+Shift+Z, Ctrl+C / V / D, Delete, Ctrl+S).
 - **Drafts and publishing:**

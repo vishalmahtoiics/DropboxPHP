@@ -54,7 +54,7 @@ if (can('pages.publish') && $p['status'] !== 'PUBLISHED') {
         <div class="builder">
             <div>
                 <?php if (!$sections): ?>
-                    <div class="card"><div class="empty"><?= Icons::svg('layers', 'icon', 32) ?><p>This page has no sections yet.</p><?php if ($canEdit): ?><button class="btn btn-primary" type="button" data-open-dialog="add-section"><?= Icons::svg('plus', 'icon', 16) ?> Add the first section</button><?php endif; ?></div></div>
+                    <div class="card"><div class="empty"><?= Icons::svg('layers', 'icon', 32) ?><p>This page has no sections yet.</p><?php if ($canEdit): ?><button class="btn btn-primary" type="button" data-open-dialog="add-section"><?= Icons::svg('plus', 'icon', 16) ?> Add the first section</button> <button class="btn btn-secondary" type="button" data-section-paste="/admin/pages/<?= (int) $p['id'] ?>/sections/paste" hidden><?= Icons::svg('clipboard', 'icon', 16) ?> Paste section</button><?php endif; ?></div></div>
                 <?php else: ?>
                     <ul class="section-list" <?= $canEdit ? 'data-sortable="/admin/pages/' . (int) $p['id'] . '/sections/reorder"' : '' ?>>
                         <?php foreach ($sections as $i => $s): $def = Blocks::get($s['block_type']); ?>
@@ -74,6 +74,7 @@ if (can('pages.publish') && $p['status'] !== 'PUBLISHED') {
                                             <?php if ($i < count($sections) - 1): ?><?= Form::action('/admin/sections/' . $s['id'] . '/move?dir=down', 'Move down', '', '', 'chevron-down') ?><?php endif; ?>
                                             <?= Form::action('/admin/sections/' . $s['id'] . '/toggle', (int) $s['is_visible'] ? 'Hide' : 'Show', '', '', (int) $s['is_visible'] ? 'eye-off' : 'eye') ?>
                                             <?= Form::action('/admin/sections/' . $s['id'] . '/duplicate', 'Duplicate', '', '', 'copy') ?>
+                                            <button type="button" data-section-copy="/admin/sections/<?= (int) $s['id'] ?>/clipboard"><?= Icons::svg('clipboard', 'icon', 16) ?> Copy (paste on any page)</button>
                                             <?= Form::action('/admin/sections/' . $s['id'] . '/delete', 'Delete', '', 'Delete this section? This cannot be undone.', 'trash') ?>
                                         </div>
                                     </div>
@@ -81,7 +82,7 @@ if (can('pages.publish') && $p['status'] !== 'PUBLISHED') {
                             </li>
                         <?php endforeach; ?>
                     </ul>
-                    <?php if ($canEdit): ?><button class="btn btn-secondary btn-block" type="button" data-open-dialog="add-section"><?= Icons::svg('plus', 'icon', 16) ?> Add section</button><?php endif; ?>
+                    <?php if ($canEdit): ?><div class="row" style="gap:.5rem"><button class="btn btn-secondary grow" type="button" data-open-dialog="add-section"><?= Icons::svg('plus', 'icon', 16) ?> Add section</button><button class="btn btn-secondary" type="button" data-section-paste="/admin/pages/<?= (int) $p['id'] ?>/sections/paste" hidden><?= Icons::svg('clipboard', 'icon', 16) ?> Paste section</button></div><?php endif; ?>
                 <?php endif; ?>
             </div>
             <aside>

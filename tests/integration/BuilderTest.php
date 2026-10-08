@@ -251,3 +251,48 @@ test('renaming a media file moves it, updates every use and redirects the old ad
     assert_same(200, dispatch(fake_request('GET', $media['url']))->status);
     App\Services\Storage::delete('local', $media['storage_key']);
 });
+
+test('copy a classic section and paste it on another page, or into the builder', function () use ($newPage): void {
+    $from = $newPage('bx-copy-from');
+    $to = $newPage('bx-copy-to');
+    $sid = DB::insert('page_sections', ['page_id' => $from, 'block_type' => 'hero', 'sort_order' => 0, 'content' => App\Cms\Blocks::normalize('hero', ['heading' => 'Copied hero'] + App\Cms\Blocks::defaults('hero')), 'settings' => App\Cms\Design::normalize(['preset' => 'dark'])]);
+    sign_in_as('content-marketing');
+    $copy = json_decode(dispatch(fake_request('GET', '/admin/sections/' . $sid . '/clipboard'))->body, true);
+    assert_same('container', $copy['element']['type']);
+    assert_same('block.hero', $copy['element']['children'][0]['type']);
+    assert_same('Copied hero', $copy['element']['children'][0]['settings']['heading']);
+
+    // Classic editor of another page.
+    $res = dispatch(fake_request('POST', '/admin/pages/' . $to . '/sections/paste', ['element' => $copy['element']]));
+    assert_same(200, $res->status);
+    $row = DB::first('SELECT * FROM page_sections WHERE page_id = ?', [$to]);
+    assert_same('hero', $row['block_type']);
+    assert_same('Copied hero', json_decode((string) $row['content'], true)['heading']);
+    assert_same('dark', json_decode((string) $row['settings'], true)['preset'], 'the design comes along');
+    assert_contains('Copied hero', dispatch(fake_request('GET', '/bx-copy-to'))->body);
+
+    // The same clipboard pastes into the builder (it is a builder element).
+    $layout = ['elements' => [$copy['element']]];
+    $render = json_decode(dispatch(fake_request('POST', '/admin/builder/page/' . $to . '/render', ['layout' => $layout]))->body, true);
+    assert_contains('Copied hero', $render['html']);
+
+    // Builder-only widgets cannot go into the classic editor.
+    $widget = ['type' => 'container', 'children' => [['type' => 'heading', 'settings' => ['title' => 'Builder only']]]];
+    $refused = dispatch(fake_request('POST', '/admin/pages/' . $to . '/sections/paste', ['element' => $widget]));
+    assert_same(302, $refused->status);
+    assert_same(1, (int) DB::value('SELECT COUNT(*) FROM page_sections WHERE page_id = ?', [$to]));
+
+    sign_in_as('sales');
+    assert_same(403, dispatch(fake_request('POST', '/admin/pages/' . $to . '/sections/paste', ['element' => $copy['element']]))->status);
+});
+
+test('opening the builder straight on a sections page shows its sections', function () use ($newPage): void {
+    $id = $newPage('bx-direct');
+    DB::insert('page_sections', ['page_id' => $id, 'block_type' => 'cta', 'sort_order' => 0, 'content' => App\Cms\Blocks::normalize('cta', ['heading' => 'Direct CTA'] + App\Cms\Blocks::defaults('cta')), 'settings' => App\Cms\Design::defaults()]);
+    sign_in_as('content-marketing');
+    $body = dispatch(fake_request('GET', '/admin/builder/page/' . $id))->body;
+    preg_match('#<script type="application/json" id="bx-config">(.*?)</script>#s', $body, $m);
+    $cfg = json_decode($m[1], true);
+    assert_same('block.cta', $cfg['layout']['elements'][0]['children'][0]['type']);
+    assert_same('Direct CTA', $cfg['layout']['elements'][0]['children'][0]['settings']['heading']);
+});

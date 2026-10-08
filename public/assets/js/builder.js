@@ -350,16 +350,52 @@
     if (!f) return;
     try { localStorage.setItem('bx-clipboard', JSON.stringify(f.el)); toast('Copied ' + DEFS[f.el.type].label.toLowerCase() + '.'); } catch (e) { toast('Could not copy.', 'error'); }
   }
-  function paste() {
+  /** The copied element (this browser, any page), or null. */
+  function readClipboard() {
     let el = null;
     try { el = JSON.parse(localStorage.getItem('bx-clipboard') || 'null'); } catch (e) { el = null; }
-    if (!el || !DEFS[el.type]) { toast('Nothing to paste.', 'error'); return; }
+    return el && typeof el === 'object' && DEFS[el.type] ? el : null;
+  }
+  /** Keys a control writes, with its tablet/mobile variants. */
+  const styleKeys = (type) => {
+    const keys = new Set();
+    for (const tab of ['style', 'advanced']) {
+      for (const sec of (DEFS[type].tabs[tab] || [])) {
+        for (const c of sec.controls) {
+          if (!c.key || (c.code && !cfg.canCode)) continue;
+          keys.add(c.key);
+          if (c.responsive) { keys.add(c.key + '_tablet'); keys.add(c.key + '_mobile'); }
+        }
+      }
+    }
+    return keys;
+  };
+  /** Elementor's "Paste style": the copied element's look, not its content. */
+  function pasteStyle(id) {
+    const f = locate(id);
+    const clip = readClipboard();
+    if (!f || !clip) { toast('Copy an element first.', 'error'); return; }
+    const from = styleKeys(clip.type);
+    const to = styleKeys(f.el.type);
+    let n = 0;
+    change(() => {
+      for (const k of to) if (k in f.el.settings && !(k === '_css_id')) delete f.el.settings[k];
+      for (const [k, v] of Object.entries(clip.settings || {})) {
+        if (from.has(k) && to.has(k) && k !== '_css_id') { f.el.settings[k] = clone(v); n++; }
+      }
+    }, { panel: true });
+    toast(n ? 'Style pasted.' : 'Nothing in the copied element\'s style applies here.', n ? 'success' : 'info');
+  }
+  function paste() {
+    const el = readClipboard();
+    if (!el) { toast('Nothing to paste. Copy an element first (right-click → Copy, or Ctrl+C).', 'error'); return; }
     reid(el);
     const f = locate(selectedId);
     let target = null;
     if (f) target = f.el.type === 'container' && el.type !== 'container' ? { parent: f.el.id, index: f.el.children.length } : { parent: f.parent ? f.parent.id : null, index: f.index + 1 };
     change(() => insertAt(el, target));
     select(el.id, { scroll: true });
+    toast('Pasted ' + DEFS[el.type].label.toLowerCase() + '.');
   }
 
   // --- values ---------------------------------------------------------------------------------
@@ -809,20 +845,33 @@
   const menu = $('[data-bx-menu]');
   function openMenu(id, x, y) {
     const f = locate(id);
-    if (!f) return;
-    const isContainer = f.el.type === 'container';
-    const item = (label, ic, fn, extra = '') => h('button', { type: 'button', role: 'menuitem', class: 'bx-menu-item ' + extra, onclick: () => { closeMenu(); fn(); } }, h('span', { html: icon(ic) }), h('span', { text: label }));
+    const item = (label, ic, fn, extra = '', disabled = false) => h('button', { type: 'button', role: 'menuitem', class: 'bx-menu-item ' + extra, disabled, onclick: () => { closeMenu(); fn(); } }, h('span', { html: icon(ic) }), h('span', { text: label }));
+    const clip = readClipboard();
+    const clipLabel = clip ? ' ' + DEFS[clip.type].label.toLowerCase() : '';
     menu.innerHTML = '';
+    if (!f) {
+      menu.append(
+        item('Paste' + clipLabel, 'clipboard', () => paste(), '', !clip),
+        item('Add a container', 'plus', () => openStructure({ parent: null, index: doc.elements.length })),
+        item('Navigator', 'layers', () => toggleNavigator(true)));
+      showMenu(x, y);
+      return;
+    }
+    const isContainer = f.el.type === 'container';
     menu.append(
       item('Edit ' + DEFS[f.el.type].label.toLowerCase(), 'edit', () => select(id)),
       item('Duplicate', 'copy', () => duplicate(id)),
       item('Copy', 'clipboard', () => copyEl(id)),
-      item('Paste', 'clipboard', () => paste()),
+      item('Paste' + clipLabel, 'clipboard', () => paste(), '', !clip),
+      item('Paste style', 'palette', () => pasteStyle(id), '', !clip),
       f.parent ? item('Select parent container', 'arrow-up-right', () => select(f.parent.id, { scroll: true })) : '',
       isContainer ? item('Add a container after', 'plus', () => openStructure({ parent: f.parent ? f.parent.id : null, index: f.index + 1 })) : '',
       isContainer ? item('Save as template', 'folder', () => openSaveTemplate(id)) : '',
       item('Navigator', 'layers', () => toggleNavigator(true)),
       item('Delete', 'trash', () => remove(id), 'is-danger'));
+    showMenu(x, y);
+  }
+  function showMenu(x, y) {
     menu.hidden = false;
     const r = menu.getBoundingClientRect();
     menu.style.left = Math.min(x, innerWidth - r.width - 8) + 'px';

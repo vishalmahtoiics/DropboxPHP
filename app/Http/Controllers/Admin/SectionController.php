@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Builder\Elements;
+use App\Builder\Layout;
 use App\Cms\Blocks;
 use App\Cms\Design;
 use App\Core\Audit;
@@ -189,6 +191,70 @@ final class SectionController extends AdminController
         }
         Countries::assertAccess((int) $page['country_id']);
         return $page;
+    }
+
+    /**
+     * Copy: the section in the builder's clipboard format (a container
+     * holding the block), so it pastes into the classic editor of any page
+     * and into the visual builder alike.
+     */
+    public function clipboard(string $id): Response
+    {
+        $this->authorize('pages.view');
+        [$section] = $this->find($this->id($id));
+        $section['content'] = json_decode((string) $section['content'], true) ?: [];
+        $section['settings'] = json_decode((string) $section['settings'], true) ?: [];
+        $layout = Layout::fromSections([$section]);
+        if (Layout::isEmpty($layout)) {
+            throw ValidationException::with('section', 'This section cannot be copied.');
+        }
+        return $this->json(['ok' => true, 'element' => $layout['elements'][0]]);
+    }
+
+    /**
+     * Paste copied sections at the end of a page. Anything copied in the
+     * builder works as long as it contains ready-made sections; other
+     * widgets only exist in the builder.
+     */
+    public function paste(string $pageId): Response
+    {
+        $this->authorize('pages.edit');
+        $page = $this->page_((int) $this->id($pageId));
+        $element = $this->request->body['element'] ?? null;
+        $layout = Layout::normalize(['elements' => [is_array($element) ? $element : []]]);
+        $blocks = [];
+        $walk = static function (array $elements) use (&$walk, &$blocks): void {
+            foreach ($elements as $el) {
+                $def = Elements::get($el['type']);
+                if (isset($def['block'])) {
+                    $blocks[] = [$def['block'], $el['settings']];
+                }
+                if (!empty($el['children'])) {
+                    $walk($el['children']);
+                }
+            }
+        };
+        $walk($layout['elements']);
+        if (!$blocks) {
+            throw ValidationException::with('element', 'That was copied from the visual builder and is not a ready-made section. Open this page with "Edit with Builder" to paste it there.');
+        }
+        $order = (int) DB::value('SELECT COALESCE(MAX(sort_order), -10) FROM page_sections WHERE page_id = ?', [$page['id']]);
+        foreach ($blocks as [$type, $settings]) {
+            $order += 10;
+            $design = Design::normalize(array_merge(
+                is_array($settings['_design'] ?? null) ? $settings['_design'] : [],
+                array_filter(['preset' => $settings['_preset'] ?? null, 'width' => $settings['_section_width'] ?? null])
+            ));
+            $hidden = !empty($settings['_hide_desktop']) && !empty($settings['_hide_tablet']) && !empty($settings['_hide_mobile']);
+            DB::insert('page_sections', [
+                'page_id' => $page['id'], 'block_type' => $type, 'sort_order' => $order, 'is_visible' => $hidden ? 0 : 1,
+                'content' => Blocks::normalize($type, $settings), 'settings' => $design,
+            ]);
+        }
+        $this->touch($page);
+        Audit::record('created', 'Section', (int) $page['id'], 'Pasted ' . count($blocks) . ' section(s) into "' . $page['title'] . '"');
+        $this->flash(count($blocks) === 1 ? 'Section pasted at the end of the page.' : count($blocks) . ' sections pasted at the end of the page.');
+        return $this->json(['ok' => true, 'count' => count($blocks)]);
     }
 
     /** @return array{0:array<string,mixed>,1:array<string,mixed>} */

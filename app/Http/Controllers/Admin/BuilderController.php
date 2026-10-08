@@ -38,6 +38,10 @@ final class BuilderController extends AdminController
     {
         $owner = $this->owner($kind, $id);
         $layouts = Store::layouts($kind, $owner);
+        if ($kind === 'page' && $layouts['draft'] === null && Layout::isEmpty($layouts['live']) && $owner['editor'] !== 'builder') {
+            // Opened straight from a link: start from the page's classic sections.
+            $layouts['live'] = Layout::fromSections(Content::sections((int) $owner['id'], true));
+        }
         if ($kind === 'product' && $layouts['draft'] === null && Layout::isEmpty($layouts['live'])) {
             // A product's first layout starts from the template it used, or the
             // classic product page rebuilt in widgets.

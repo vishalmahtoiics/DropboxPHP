@@ -150,7 +150,13 @@
 
   document.addEventListener('contextmenu', (e) => {
     const node = e.target.closest('[data-el]');
-    if (!node || !root.contains(node)) return;
+    if (!node || !root.contains(node)) {
+      // Empty space: offer Paste and adding a container.
+      e.preventDefault();
+      select(null, true);
+      send({ type: 'bx:context', id: null, x: e.clientX, y: e.clientY });
+      return;
+    }
     e.preventDefault();
     select(node.dataset.el, true);
     send({ type: 'bx:context', id: node.dataset.el, x: e.clientX, y: e.clientY });

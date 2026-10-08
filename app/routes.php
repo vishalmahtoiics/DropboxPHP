@@ -53,6 +53,8 @@ return static function (Router $r): void {
     $r->post('/admin/pages/{id}/copy-to-market', [Admin\PageController::class, 'copyToMarket']);
     $r->post('/admin/pages/{id}/sections', [Admin\SectionController::class, 'store']);
     $r->post('/admin/pages/{id}/sections/reorder', [Admin\SectionController::class, 'reorder']);
+    $r->post('/admin/pages/{id}/sections/paste', [Admin\SectionController::class, 'paste']);
+    $r->get('/admin/sections/{id}/clipboard', [Admin\SectionController::class, 'clipboard']);
     $r->get('/admin/sections/{id}', [Admin\SectionController::class, 'edit']);
     $r->post('/admin/sections/{id}', [Admin\SectionController::class, 'update']);
     $r->post('/admin/sections/{id}/delete', [Admin\SectionController::class, 'destroy']);
