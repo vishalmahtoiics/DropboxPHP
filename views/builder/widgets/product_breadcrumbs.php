@@ -1,0 +1,2 @@
+<?php /** @var array $product */ use App\Services\Countries; ?>
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="<?= e(Countries::href(null, '/')) ?>">Home</a> / <a href="<?= e(Countries::href(null, '/pricing')) ?>">Plans</a><?php if ($product['category_name']): ?> / <span><?= e($product['category_name']) ?></span><?php endif; ?> / <span aria-current="page"><?= e($product['name']) ?></span></nav>

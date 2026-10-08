@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.3']
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: site_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, sodium, mbstring, zip, dom, curl, fileinfo
+          coverage: none
+      - name: Lint
+        run: |
+          find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+          php -l bin/console > /dev/null
+      - name: Record a test installation
+        run: |
+          cat > storage/installed.php <<'PHP'
+          <?php
+          return [
+              'url' => 'http://localhost',
+              'key' => 'base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+              'cron_secret' => 'ci-cron-secret-ci-cron-secret',
+              'login_path' => '/auth-control-panel/admin',
+              'timezone' => 'Asia/Kolkata',
+              'database' => ['host' => '127.0.0.1', 'port' => 3306, 'database' => 'site', 'username' => 'root', 'password' => 'root', 'socket' => ''],
+          ];
+          PHP
+      - name: Tests
+        run: php tests/run.php

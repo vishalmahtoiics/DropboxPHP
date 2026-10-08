@@ -1,0 +1,31 @@
+# Apache (cPanel / shared hosting). Every request that is not a real file
+# under public/ is handed to index.php.
+
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Pass the Authorization header through to PHP.
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Never serve dotfiles (.git, .htaccess …) even if one ends up in here.
+    RewriteRule (^|/)\. - [F,L]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|svg|png|jpe?g|webp|avif|gif|ico|woff2?)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_php.c>
+    php_flag expose_php Off
+    php_value upload_max_filesize 16M
+    php_value post_max_size 20M
+</IfModule>

@@ -1,0 +1,132 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/*
+ * Command-line tasks. Run from the project root:
+ *
+ *   php bin/console migrate             apply pending database migrations
+ *   php bin/console db:seed [--no-demo] roles, permissions, markets, demo content
+ *   php bin/console user:create         create a Super Admin interactively
+ *   php bin/console user:reset-mfa      clear a user's authenticator (lost phone)
+ *   php bin/console cron                run scheduled jobs (backups, publishing, cleanup)
+ *   php bin/console status              environment and database check
+ *
+ * The site is installed from the browser (open it and follow /install); these
+ * commands work once that is done.
+ */
+
+require dirname(__DIR__) . '/app/bootstrap.php';
+
+use App\Core\Auth;
+use App\Core\DB;
+use App\Core\Migrator;
+use App\Core\Permissions;
+use App\Services\Cron;
+use Database\Seeder;
+
+$command = $argv[1] ?? 'help';
+$args = array_slice($argv, 2);
+
+$out = static function (string $line = ''): void {
+    fwrite(STDOUT, $line . PHP_EOL);
+};
+$ask = static function (string $prompt, bool $hidden = false): string {
+    fwrite(STDOUT, $prompt);
+    if ($hidden && DIRECTORY_SEPARATOR === '/') {
+        system('stty -echo');
+        $value = trim((string) fgets(STDIN));
+        system('stty echo');
+        fwrite(STDOUT, PHP_EOL);
+        return $value;
+    }
+    return trim((string) fgets(STDIN));
+};
+
+if (!App\Core\Installation::installed() && !in_array($command, ['help', 'status'], true)) {
+    $out('The site is not installed yet. Open it in a browser to run the installer.');
+    exit(1);
+}
+
+switch ($command) {
+    case 'migrate':
+        $applied = Migrator::migrate(static fn (string $name) => $out("  applied  $name"));
+        Permissions::sync();
+        $out($applied === [] ? 'Nothing to migrate.' : count($applied) . ' migration(s) applied.');
+        break;
+
+    case 'migrate:status':
+        $pending = Migrator::pending();
+        $out($pending === [] ? 'Up to date.' : "Pending:\n  " . implode("\n  ", $pending));
+        break;
+
+    case 'db:seed':
+        require BASE_PATH . '/database/Seeder.php';
+        (new Seeder($out, !in_array('--no-demo', $args, true)))->run();
+        break;
+
+    case 'user:create':
+        Permissions::sync();
+        $email = strtolower($ask('Email: '));
+        $name = $ask('Name: ');
+        $password = $ask('Password: ', true);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $name === '') {
+            $out('A valid email and a name are required.');
+            exit(1);
+        }
+        if ($error = Auth::passwordError($password, $email)) {
+            $out($error);
+            exit(1);
+        }
+        $roleId = (int) DB::value("SELECT id FROM roles WHERE slug = 'super-admin'");
+        DB::upsert('users', [
+            'email' => $email, 'name' => $name, 'password_hash' => Auth::hash($password),
+            'role_id' => $roleId, 'status' => 'ACTIVE', 'password_changed_at' => date('Y-m-d H:i:s'),
+        ], ['name', 'password_hash', 'role_id', 'status', 'password_changed_at']);
+        $out("Super Admin $email is ready. Sign in at " . config('app.url') . config('app.login_path'));
+        break;
+
+    case 'user:reset-mfa':
+        $email = strtolower($args[0] ?? $ask('Email: '));
+        $count = DB::update('users', [
+            'two_factor_enabled' => 0, 'two_factor_secret' => null, 'two_factor_pending' => null,
+            'two_factor_verified_at' => null, 'two_factor_last_step' => null,
+        ], ['email' => $email]);
+        if ($count) {
+            $id = (int) DB::value('SELECT id FROM users WHERE email = ?', [$email]);
+            DB::delete('recovery_codes', ['user_id' => $id]);
+            Auth::revokeAll($id, 'mfa-reset');
+        }
+        $out($count ? "Authenticator cleared for $email. They will enrol again at next sign-in." : 'No such user.');
+        break;
+
+    case 'cron':
+        foreach (Cron::run() as $line) {
+            $out($line);
+        }
+        break;
+
+    case 'status':
+        $out('PHP        ' . PHP_VERSION);
+        $out('Env        ' . config('app.env') . (config('app.debug') ? ' (debug)' : ''));
+        $out('URL        ' . config('app.url'));
+        $out('Installed  ' . (App\Core\Installation::installed() ? 'yes' : 'NO — open the site in a browser to install'));
+        try {
+            $out('Database   ' . DB::value('SELECT VERSION()'));
+            $pending = Migrator::pending();
+            $out('Migrations ' . ($pending === [] ? 'up to date' : count($pending) . ' pending'));
+        } catch (Throwable $e) {
+            $out('Database   unreachable: ' . $e->getMessage());
+        }
+        foreach (['upload_dir' => 'Uploads', 'backup_dir' => 'Backups'] as $key => $label) {
+            $dir = (string) config("app.$key");
+            $out(str_pad($label, 11) . $dir . (is_dir($dir) && is_writable($dir) ? ' (writable)' : ' (NOT writable)'));
+        }
+        break;
+
+    default:
+        $out('Usage: php bin/console <command>');
+        $out('  migrate   migrate:status   db:seed [--no-demo]');
+        $out('  user:create   user:reset-mfa <email>   cron   status');
+}

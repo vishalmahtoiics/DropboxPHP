@@ -1,0 +1,49 @@
+/* Builder canvas overlays (inside the editor's iframe only). */
+:root { --bx-blue: #2563eb; --bx-cyan: #0ea5e9; --bx-pink: #db2777; }
+html { scroll-behavior: auto; }
+body.bx-is-empty .bx-root { min-height: 40vh; }
+.bx-root [data-el] { cursor: default; }
+.bx-root a, .bx-root button, .bx-root summary { cursor: pointer; }
+.bx-root .bx-anim { opacity: 1 !important; transform: none !important; }
+.bx-is-dragging { opacity: .35; }
+
+/* Empty states shown only in the editor */
+.bx-empty { border: 2px dashed #c7d2e2; border-radius: 8px; padding: 28px 16px; text-align: center; color: #7a879c; font: 500 13px/1.4 system-ui, sans-serif; background: rgba(241, 245, 252, .6); width: 100%; cursor: pointer; }
+.bx-note { border: 1px dashed #c7d2e2; border-radius: 6px; padding: 14px; text-align: center; color: #7a879c; font: 13px/1.4 system-ui, sans-serif; background: #f8fafc; }
+.bx-placeholder-img { display: grid; place-items: center; min-height: 160px; border-radius: 8px; background: repeating-linear-gradient(45deg, #eef2f8, #eef2f8 10px, #f6f8fc 10px, #f6f8fc 20px); color: #7a879c; font: 500 13px system-ui, sans-serif; }
+body.bx-is-empty .bx-root::before { content: 'Your page is empty. Drag a widget from the left, or add a container below.'; display: block; text-align: center; padding: 80px 20px 20px; color: #7a879c; font: 500 15px system-ui, sans-serif; }
+
+/* Elements hidden at the current screen size stay visible (faded) while editing */
+@media (min-width: 1025px) { .bx-root .bx-hide-desktop { display: block !important; opacity: .35; outline: 1px dashed #94a3b8; } }
+@media (min-width: 768px) and (max-width: 1024px) { .bx-root .bx-hide-tablet { display: block !important; opacity: .35; outline: 1px dashed #94a3b8; } }
+@media (max-width: 767px) { .bx-root .bx-hide-mobile { display: block !important; opacity: .35; outline: 1px dashed #94a3b8; } }
+
+/* Outlines */
+.bx-ov { position: absolute; pointer-events: none; z-index: 2147483000; box-sizing: border-box; }
+.bx-ov-hover { outline: 1px solid var(--bx-cyan); }
+.bx-ov-hover.is-container { outline: 1px dashed var(--bx-blue); }
+.bx-ov-label { position: absolute; left: -1px; top: -20px; background: var(--bx-cyan); color: #fff; font: 600 11px/20px system-ui, sans-serif; padding: 0 6px; border-radius: 3px 3px 0 0; white-space: nowrap; }
+.bx-ov-hover.is-container .bx-ov-label { background: var(--bx-blue); }
+.bx-ov-select { outline: 2px solid var(--bx-cyan); }
+.bx-ov-select.is-container { outline-color: var(--bx-blue); }
+.bx-toolbar { position: absolute; top: -26px; right: -2px; display: flex; pointer-events: auto; background: var(--bx-cyan); border-radius: 4px 4px 0 0; overflow: hidden; }
+.bx-toolbar.is-container { background: var(--bx-blue); left: 50%; right: auto; transform: translateX(-50%); top: -26px; }
+.bx-tool { all: unset; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; color: #fff; cursor: pointer; }
+.bx-tool:hover { background: rgba(0, 0, 0, .18); }
+.bx-tool[data-action="move"] { cursor: grab; }
+.bx-tool .icon { width: 14px; height: 14px; }
+.bx-ov-select.at-top .bx-toolbar { top: 0; border-radius: 0 0 4px 4px; }
+
+/* Drop indicators */
+.bx-dropline { position: absolute; z-index: 2147483001; pointer-events: none; background: var(--bx-pink); border-radius: 2px; box-shadow: 0 0 0 2px rgba(219, 39, 119, .2); }
+.bx-dropzone { position: absolute; z-index: 2147483001; pointer-events: none; border: 2px dashed var(--bx-pink); background: rgba(219, 39, 119, .06); border-radius: 6px; }
+
+/* "Add" zone below the layout */
+.bx-add-zone { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 24px auto 48px; max-width: 72rem; width: calc(100% - 48px); padding: 26px 16px; border: 2px dashed #c7d2e2; border-radius: 10px; color: #7a879c; font: 500 13px system-ui, sans-serif; background: rgba(248, 250, 252, .8); }
+.bx-add-zone button { all: unset; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: #e2e8f0; color: #334155; cursor: pointer; }
+.bx-add-zone button[data-bx-add-root] { background: var(--bx-pink); color: #fff; }
+.bx-add-zone button:hover { filter: brightness(.92); }
+.bx-add-zone span { margin-left: 6px; }
+.bx-note-small { padding: 6px 10px; font-size: 12px; margin-top: 6px; }
+.bx-chrome-sample { margin: 24px; padding: 60px 20px; border-radius: 10px; background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 12px, #f8fafc 12px, #f8fafc 24px); color: #64748b; text-align: center; font: 500 14px system-ui, sans-serif; }
+.bx-root .bx-nav-toggle { pointer-events: auto; }

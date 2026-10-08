@@ -1,0 +1,16 @@
+# For hosts where the document root cannot be pointed at public/ (some
+# shared hosting): route everything into public/ and refuse direct access to
+# the application, configuration and storage directories.
+#
+# The preferred setup is still to set the domain's document root to
+# /path/to/project/public, in which case this file is never read.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule (^|/)\. - [F,L]
+    RewriteRule ^(app|bin|config|database|storage|tests|views|docs|vendor)(/|$) - [F,L]
+    RewriteRule ^(composer\.(json|lock)|phpunit\.xml|README\.md)$ - [F,L]
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
