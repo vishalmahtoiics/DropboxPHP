@@ -135,7 +135,7 @@ final class Redirects
     /** Count 404s for the URL health report. */
     public static function recordNotFound(Request $request): void
     {
-        if ($request->method !== 'GET' || preg_match('/\.(php|env|git|aspx?|jsp|cgi|sql|bak|zip|tar|gz)$|wp-|xmlrpc/i', $request->path)) {
+        if ($request->method !== 'GET' || preg_match('/\.(php|env|git|aspx?|jsp|cgi|sql|bak|zip|tar|gz|ico|png|jpe?g|gif|svg|webp|css|js|map|txt|xml)$|wp-|xmlrpc|apple-touch/i', $request->path)) {
             return;
         }
         try {

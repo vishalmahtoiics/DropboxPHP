@@ -127,6 +127,7 @@ final class LeadCapture
                     'product_id' => $productId,
                     'landing_page_id' => $page['id'] ?? null,
                     'form_id' => $form['id'],
+                    'lead_magnet_id' => !empty($input['magnet']) ? (DB::value('SELECT id FROM lead_magnets WHERE slug = ? AND deleted_at IS NULL', [(string) $input['magnet']]) ?: null) : null,
                     'marketing_consent' => $consent['marketing'] ? 1 : 0,
                     'pipeline_order' => 0,
                 ]);

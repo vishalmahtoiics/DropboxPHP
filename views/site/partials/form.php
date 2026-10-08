@@ -23,6 +23,7 @@ $columns = (int) ($design['columns'] ?? 2) === 1 ? 1 : 2;
     <input type="hidden" name="cta_label" value="<?= e($ctaLabel ?? '') ?>">
     <input type="hidden" name="product_id" value="<?= e((string) ($productId ?? '')) ?>">
     <input type="hidden" name="page_url" value="">
+    <?php if (!empty($magnet)): ?><input type="hidden" name="magnet" value="<?= e($magnet) ?>"><?php endif; ?>
     <div class="hp" aria-hidden="true"><label>Leave this empty <input type="text" name="website_url" tabindex="-1" autocomplete="off"></label></div>
     <div class="form-grid">
         <?php foreach ($form['fields'] as $f): ?>
