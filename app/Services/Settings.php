@@ -144,6 +144,13 @@ final class Settings
             'cta_label' => ['s', 'Talk to sales'],
             'cta_url' => ['u', '/contact'],
         ],
+        'backup' => [
+            'enabled' => ['b', false],
+            'frequency' => ['s', 'daily'],
+            'hour' => ['i', 2],
+            'retention' => ['i', 7],
+            'include_media' => ['b', true],
+        ],
         'product' => [
             'base_path' => ['s', 'products'],
             'show_compare_price' => ['b', true],
