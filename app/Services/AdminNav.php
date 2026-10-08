@@ -18,6 +18,7 @@ final class AdminNav
             ]],
             ['title' => 'Website', 'items' => [
                 ['label' => 'Pages', 'href' => '/admin/pages', 'icon' => 'file-text', 'perm' => 'pages.view'],
+                ['label' => 'Builder templates', 'href' => '/admin/builder/templates', 'icon' => 'layout', 'perm' => 'pages.edit'],
                 ['label' => 'Cities', 'href' => '/admin/cities', 'icon' => 'map-pin', 'perm' => 'pages.view'],
                 ['label' => 'Navigation', 'href' => '/admin/navigation', 'icon' => 'navigation', 'perm' => 'navigation.manage'],
                 ['label' => 'Media library', 'href' => '/admin/media', 'icon' => 'image', 'perm' => 'media.view'],

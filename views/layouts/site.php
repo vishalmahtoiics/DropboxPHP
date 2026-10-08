@@ -9,6 +9,8 @@ $graph ??= [];
 $showHeader = !isset($page) || (int) ($page['show_header'] ?? 1) === 1;
 $showFooter = !isset($page) || (int) ($page['show_footer'] ?? 1) === 1;
 $lang = substr((string) ($country['locale'] ?? 'en'), 0, 2);
+// Inside the builder's canvas: no tracking, popups or consent banner.
+$canvas = !empty($builderCanvas);
 ?><!doctype html>
 <html lang="<?= e($country['locale'] ?? 'en') ?>">
 <head>
@@ -38,23 +40,29 @@ $lang = substr((string) ($country['locale'] ?? 'en'), 0, 2);
     <style nonce="<?= e(nonce()) ?>"><?= BrandStyle::css($site) ?></style>
     <?php foreach (Seo::siteGraph() as $item): ?><?= Seo::jsonLd($item) ?><?php endforeach; ?>
     <?php foreach ($graph as $item): ?><?= Seo::jsonLd($item) ?><?php endforeach; ?>
-    <?= Tracking::head($tracking, $consent) ?>
+    <?php if ($canvas): ?><link rel="stylesheet" href="<?= e(asset('css/builder-canvas.css')) ?>"><?php else: ?><?= Tracking::head($tracking, $consent) ?><?php endif; ?>
 </head>
 <body class="site">
-<?= Tracking::bodyStart($tracking, $consent) ?>
+<?= $canvas ? '' : Tracking::bodyStart($tracking, $consent) ?>
 <a class="skip-link" href="#content">Skip to content</a>
 <?php if ($showHeader): ?><?= View::partial('site/partials/header') ?><?php endif; ?>
 <main id="content">
     <?= $content ?>
 </main>
 <?php if ($showFooter): ?><?= View::partial('site/partials/footer') ?><?php endif; ?>
+<?php if (!$canvas): ?>
 <?= View::partial('site/partials/popups') ?>
 <?= View::partial('site/partials/consent') ?>
+<?php endif; ?>
 <dialog class="form-dialog" id="cta-dialog" aria-label="Enquiry form">
     <button class="dialog-close" type="button" data-close-dialog aria-label="Close">&times;</button>
     <div data-cta-dialog-body></div>
 </dialog>
+<?php if ($canvas): ?>
+<script nonce="<?= e(nonce()) ?>" src="<?= e(asset('js/builder-canvas.js')) ?>"></script>
+<?php else: ?>
 <script nonce="<?= e(nonce()) ?>" src="<?= e(asset('js/site.js')) ?>" defer></script>
 <?= Tracking::bodyEnd($tracking, $consent) ?>
+<?php endif; ?>
 </body>
 </html>

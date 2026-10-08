@@ -10,6 +10,11 @@ $actions = '<a class="btn btn-secondary" href="/preview/page/' . (int) $p['id'] 
 if ($p['status'] === 'PUBLISHED') {
     $actions .= ' <a class="btn btn-ghost" href="' . e($publicPath) . '" target="_blank">' . Icons::svg('external', 'icon', 16) . ' View live</a>';
 }
+if ($canEdit) {
+    $actions .= ' ' . ($p['editor'] === 'builder'
+        ? '<a class="btn btn-primary" href="/admin/builder/page/' . (int) $p['id'] . '">' . Icons::svg('layout', 'icon', 16) . ' Edit with Builder</a>'
+        : Form::action('/admin/pages/' . $p['id'] . '/builder', 'Edit with Builder', 'btn btn-secondary', '', 'layout'));
+}
 if (can('pages.publish') && $p['status'] !== 'PUBLISHED') {
     $actions .= ' ' . Form::action('/admin/pages/' . $p['id'] . '/status', 'Publish', 'btn btn-primary', '', 'check');
 }
@@ -26,6 +31,26 @@ if (can('pages.publish') && $p['status'] !== 'PUBLISHED') {
     </div>
 
     <div class="tab-panel" id="builder">
+        <?php if ($p['editor'] === 'builder'): ?>
+            <div class="card builder-switch">
+                <div class="card-body row" style="justify-content:space-between;gap:1rem;flex-wrap:wrap">
+                    <div><h2 style="margin:0 0 .25rem"><?= Icons::svg('layout', 'icon', 20) ?> This page uses the visual builder</h2>
+                        <p class="muted small" style="margin:0">Design it with drag and drop: containers, widgets, spacing and sizes for desktop, tablet and mobile.<?= $p['builder_draft'] !== null ? ' <strong>There is an unpublished draft.</strong>' : '' ?></p></div>
+                    <div class="row">
+                        <?php if ($canEdit): ?><a class="btn btn-primary" href="/admin/builder/page/<?= (int) $p['id'] ?>"><?= Icons::svg('layout', 'icon', 16) ?> Open the builder</a>
+                        <?= Form::action('/admin/pages/' . $p['id'] . '/sections-editor', 'Switch back to sections', 'btn btn-ghost', 'Show the classic sections on this page instead? The builder layout is kept, so you can switch back later.', 'layers') ?><?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        <?php else: ?>
+            <?php if ($canEdit): ?>
+            <div class="card builder-switch mb-2">
+                <div class="card-body row" style="justify-content:space-between;gap:1rem;flex-wrap:wrap">
+                    <div><strong>Prefer drag and drop?</strong> <span class="muted small">Open this page in the visual builder. Your sections are copied across — nothing is lost.</span></div>
+                    <?= Form::action('/admin/pages/' . $p['id'] . '/builder', 'Edit with Builder', 'btn btn-primary btn-sm', '', 'layout') ?>
+                </div>
+            </div>
+            <?php endif; ?>
         <div class="builder">
             <div>
                 <?php if (!$sections): ?>
@@ -67,6 +92,7 @@ if (can('pages.publish') && $p['status'] !== 'PUBLISHED') {
                 </div></div>
             </aside>
         </div>
+        <?php endif; ?>
     </div>
 
     <div class="tab-panel" id="settings" hidden>

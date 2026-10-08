@@ -77,7 +77,8 @@ final class PageController extends Controller
     /** @param array<string,mixed> $page */
     public function renderPage(array $page, bool $preview = false): Response
     {
-        $sections = Content::sections((int) $page['id'], $preview);
+        $layout = \App\Builder\Store::pageLayout($page, $preview);
+        $sections = $layout === null ? Content::sections((int) $page['id'], $preview) : [];
         $path = Content::pagePath($page);
         $og = $page['og_image_id'] ? Content::mediaUrl((int) $page['og_image_id']) : null;
         $graph = [];
@@ -87,6 +88,7 @@ final class PageController extends Controller
         $html = View::render('site/page', [
             'page' => $page,
             'sections' => $sections,
+            'builder' => $layout === null ? null : \App\Builder\Renderer::page($layout, ['page' => $page]),
             'graph' => $graph,
             'preview' => $preview,
             'seo' => Seo::meta([

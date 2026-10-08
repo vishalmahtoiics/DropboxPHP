@@ -11,6 +11,43 @@ $specs[] = ['label' => '', 'value' => ''];
 $canEdit = $p ? can('products.edit') : can('products.create');
 ?>
 <?= App\Core\View::partial('admin/partials/page-head', ['heading' => $p ? $p['name'] : 'New product', 'crumbs' => [['Products', '/admin/products'], [$p ? $p['name'] : 'New', null]], 'actions' => $p ? '<a class="btn btn-secondary" href="/preview/product/' . (int) $p['id'] . '" target="_blank">' . Icons::svg('eye', 'icon', 16) . ' Preview</a>' : '']) ?>
+<?php if ($p && $canEdit): ?>
+    <?php
+    $templatesList = App\Core\DB::all("SELECT id, name, is_default FROM builder_templates WHERE kind = 'product' ORDER BY name");
+    $defaultTpl = array_values(array_filter($templatesList, static fn ($t) => (int) $t['is_default'] === 1))[0] ?? null;
+    $mode = $p['page_layout'] ?? 'template';
+    ?>
+    <form method="post" action="/admin/products/<?= (int) $p['id'] ?>/design" class="card mb-2">
+        <?= csrf_field() ?>
+        <div class="card-body row" style="gap:1rem;flex-wrap:wrap;align-items:flex-end">
+            <div style="flex:1;min-width:260px">
+                <strong><?= Icons::svg('layout', 'icon', 18) ?> Product page design</strong>
+                <p class="muted small" style="margin:.25rem 0 0">
+                    <?php if ($mode === 'builder'): ?>This product has its own drag-and-drop layout.
+                    <?php elseif ($mode === 'template'): ?><?= $defaultTpl || $p['template_id'] ? 'Uses a builder template — change the template and every product using it follows.' : 'No default product template yet, so the classic page is shown. Create one under Builder templates.' ?>
+                    <?php else: ?>Uses the classic product page.<?php endif; ?>
+                </p>
+            </div>
+            <label class="field" style="min-width:200px"><span class="label">Design</span>
+                <select class="select" name="page_layout">
+                    <option value="template"<?= $mode === 'template' ? ' selected' : '' ?>>Template<?= $defaultTpl ? ' (default: ' . e($defaultTpl['name']) . ')' : '' ?></option>
+                    <option value="builder"<?= $mode === 'builder' ? ' selected' : '' ?>>Own builder layout</option>
+                    <option value="classic"<?= $mode === 'classic' ? ' selected' : '' ?>>Classic product page</option>
+                </select>
+            </label>
+            <?php if ($templatesList): ?>
+            <label class="field" style="min-width:200px"><span class="label">Template</span>
+                <select class="select" name="template_id">
+                    <option value="">Default template</option>
+                    <?php foreach ($templatesList as $t): ?><option value="<?= (int) $t['id'] ?>"<?= (int) ($p['template_id'] ?? 0) === (int) $t['id'] ? ' selected' : '' ?>><?= e($t['name']) ?></option><?php endforeach; ?>
+                </select>
+            </label>
+            <?php endif; ?>
+            <button class="btn btn-secondary" type="submit">Save design</button>
+            <a class="btn btn-primary" href="/admin/builder/product/<?= (int) $p['id'] ?>"><?= Icons::svg('layout', 'icon', 16) ?> Edit with Builder</a>
+        </div>
+    </form>
+<?php endif; ?>
 <form method="post" action="<?= e($action) ?>" data-guard>
     <?= csrf_field() ?>
     <div data-tabs="product">

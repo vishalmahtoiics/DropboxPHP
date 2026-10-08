@@ -137,6 +137,15 @@ final class MediaController extends AdminController
         foreach (DB::all('SELECT p.title FROM page_sections s JOIN pages p ON p.id = s.page_id WHERE (s.content LIKE ? OR s.settings LIKE ?) AND p.deleted_at IS NULL', [$like, $like]) as $r) {
             $out[] = 'Page: ' . $r['title'];
         }
+        foreach (DB::all('SELECT title FROM pages WHERE (builder_layout LIKE ? OR builder_draft LIKE ?) AND deleted_at IS NULL', [$like, $like]) as $r) {
+            $out[] = 'Page (builder): ' . $r['title'];
+        }
+        foreach (DB::all('SELECT name FROM products WHERE (builder_layout LIKE ? OR builder_draft LIKE ?) AND deleted_at IS NULL', [$like, $like]) as $r) {
+            $out[] = 'Product (builder): ' . $r['name'];
+        }
+        foreach (DB::all('SELECT name FROM builder_templates WHERE layout LIKE ? OR draft LIKE ?', [$like, $like]) as $r) {
+            $out[] = 'Builder template: ' . $r['name'];
+        }
         foreach (DB::all('SELECT name FROM products WHERE (image_id = ? OR og_image_id = ? OR description LIKE ?) AND deleted_at IS NULL', [$id, $id, $like]) as $r) {
             $out[] = 'Product: ' . $r['name'];
         }

@@ -180,6 +180,24 @@ return static function (Router $r): void {
     $r->post('/admin/lead-magnets/{id}/delete', [Admin\LeadMagnetController::class, 'destroy']);
 
     // Settings
+    // Visual builder
+    $r->get('/admin/builder/templates', [Admin\BuilderController::class, 'templates']);
+    $r->post('/admin/builder/templates', [Admin\BuilderController::class, 'createTemplate']);
+    $r->get('/admin/builder/templates.json', [Admin\BuilderController::class, 'templateList']);
+    $r->post('/admin/builder/templates/from-selection', [Admin\BuilderController::class, 'saveSelection']);
+    $r->get('/admin/builder/templates/{id}/elements', [Admin\BuilderController::class, 'templateElements']);
+    $r->post('/admin/builder/templates/{id}', [Admin\BuilderController::class, 'updateTemplate']);
+    $r->post('/admin/pages/{id}/builder', [Admin\BuilderController::class, 'enablePage']);
+    $r->post('/admin/products/{id}/design', [Admin\BuilderController::class, 'productDesign']);
+    $r->post('/admin/pages/{id}/sections-editor', [Admin\BuilderController::class, 'disablePage']);
+    $r->get('/admin/builder/{kind}/{id}', [Admin\BuilderController::class, 'editor']);
+    $r->get('/admin/builder/{kind}/{id}/canvas', [Admin\BuilderController::class, 'canvas']);
+    $r->post('/admin/builder/{kind}/{id}/render', [Admin\BuilderController::class, 'render']);
+    $r->post('/admin/builder/{kind}/{id}/save', [Admin\BuilderController::class, 'save']);
+    $r->post('/admin/builder/{kind}/{id}/discard', [Admin\BuilderController::class, 'discard']);
+    $r->get('/admin/builder/{kind}/{id}/revisions', [Admin\BuilderController::class, 'revisions']);
+    $r->get('/admin/builder/{kind}/{id}/revisions/{revision}', [Admin\BuilderController::class, 'revision']);
+
     $r->get('/admin/settings', [Admin\SettingsController::class, 'index']);
     $r->post('/admin/settings/system', [Admin\SettingsController::class, 'saveSystem']);
     $r->post('/admin/settings/system/migrate', [Admin\SettingsController::class, 'migrate']);

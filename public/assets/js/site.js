@@ -4,6 +4,7 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const nonce = (document.querySelector('script[nonce]') || {}).nonce || '';
+  document.documentElement.classList.add('bx-js');
 
   // --- mobile navigation ---------------------------------------------------------
   const toggle = $('[data-nav-toggle]');
@@ -232,5 +233,53 @@
       if (value === 'granted') activateTags();
     }
     if (e.target.closest('[data-consent-open]') && banner) banner.hidden = false;
+  });
+
+  // --- builder widgets: entrance animations, counters, tabs ---------------------------
+  const reveal = (el) => {
+    el.classList.add('bx-in');
+    $$('[data-count-to]', el).concat(el.matches('[data-count-to]') ? [el] : []).forEach(countUp);
+  };
+  function countUp(el) {
+    if (el.dataset.counted) return;
+    el.dataset.counted = '1';
+    const to = parseFloat(el.dataset.countTo) || 0;
+    const decimals = (String(el.dataset.countTo).split('.')[1] || '').length;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const start = performance.now();
+    const tick = (t) => {
+      const p = Math.min(1, (t - start) / 1400);
+      el.textContent = (to * (1 - Math.pow(1 - p, 3))).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  const watched = $$('.bx-anim, [data-count-to]');
+  if (watched.length) {
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => entries.forEach((en) => {
+        if (en.isIntersecting) { reveal(en.target); io.unobserve(en.target); }
+      }), { rootMargin: '0px 0px -8% 0px' });
+      watched.forEach((el) => io.observe(el));
+    } else {
+      watched.forEach(reveal);
+    }
+  }
+  $$('[data-bx-tabs]').forEach((tabs) => {
+    const list = $$('[role=tab]', tabs);
+    const select = (tab) => list.forEach((t) => {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      const panel = document.getElementById(t.getAttribute('aria-controls'));
+      if (panel) panel.hidden = !on;
+    });
+    list.forEach((t, i) => {
+      t.addEventListener('click', () => select(t));
+      t.addEventListener('keydown', (e) => {
+        const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (d) { const n = list[(i + d + list.length) % list.length]; select(n); n.focus(); }
+      });
+    });
   });
 })();

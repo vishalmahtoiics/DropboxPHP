@@ -12,6 +12,8 @@ use App\Services\Countries;
 use App\Services\Forms;
 use App\Services\Seo;
 use App\Services\Settings;
+use App\Builder\Renderer;
+use App\Builder\Store;
 
 final class ProductController extends Controller
 {
@@ -36,7 +38,10 @@ final class ProductController extends Controller
             }
         }
         $pricingPath = Countries::href($country, '/pricing');
-        return Response::html(View::render('site/product', [
+        $layout = $this->layoutFor($product, $preview);
+        return Response::html(View::render($layout === null ? 'site/product' : 'site/product-builder', [
+            'builder' => $layout === null ? null : Renderer::page($layout, ['product' => $product]),
+            'preview' => $preview,
             'product' => $product,
             'form' => $form,
             'related' => array_slice($related, 0, 3),
@@ -52,5 +57,21 @@ final class ProductController extends Controller
                 'noindex' => (int) $product['no_index'] === 1 || $preview,
             ]),
         ], 'layouts/site'));
+    }
+
+    /**
+     * The builder layout for this product page, or null for the classic page.
+     * Staff previewing a template pass ?template=ID to see that template.
+     */
+    private function layoutFor(array $product, bool $preview): ?array
+    {
+        $templateId = $preview ? (int) $this->request->queryStr('template', '0') : 0;
+        if ($templateId > 0) {
+            $tpl = \App\Core\DB::first("SELECT layout, draft FROM builder_templates WHERE id = ? AND kind = 'product'", [$templateId]);
+            if ($tpl) {
+                return \App\Builder\Layout::decode($tpl['draft'] ?? $tpl['layout']);
+            }
+        }
+        return Store::productLayout($product, $preview);
     }
 }

@@ -292,8 +292,13 @@ final class PageController extends AdminController
         return $this->redirect('/admin/pages/' . $newId);
     }
 
+    /** Copy a page's content — its sections and its builder layout — onto another page. */
     public static function copySections(int $fromPage, int $toPage): void
     {
+        $builder = DB::first('SELECT editor, builder_layout, builder_draft FROM pages WHERE id = ?', [$fromPage]);
+        if ($builder) {
+            DB::update('pages', $builder, ['id' => $toPage]);
+        }
         foreach (DB::all('SELECT * FROM page_sections WHERE page_id = ? ORDER BY sort_order', [$fromPage]) as $s) {
             DB::insert('page_sections', [
                 'page_id' => $toPage, 'block_type' => $s['block_type'], 'name' => $s['name'], 'sort_order' => $s['sort_order'],

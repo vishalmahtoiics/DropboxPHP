@@ -91,6 +91,11 @@ final class Cities
                 foreach (['seo_title', 'seo_description', 'og_title', 'og_description', 'primary_keywords'] as $k) {
                     $row[$k] = $row[$k] === null ? null : strtr((string) $row[$k], $tokens);
                 }
+                foreach (['builder_layout', 'builder_draft'] as $k) {
+                    if (($row[$k] ?? null) !== null) {
+                        $row[$k] = \App\Builder\Layout::encode(\App\Builder\Layout::mapStrings(\App\Builder\Layout::decode((string) $row[$k]), static fn (string $v) => strtr($v, $tokens)));
+                    }
+                }
                 $row['title'] = strtr($titlePattern !== '' ? $titlePattern : $template['title'], $tokens);
                 $row['slug'] = $slug;
                 $row['status'] = $publish ? 'PUBLISHED' : 'DRAFT';

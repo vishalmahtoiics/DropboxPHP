@@ -66,6 +66,51 @@ php -S 127.0.0.1:8000 -t public public/index.php
 
 Open http://127.0.0.1:8000. You get the same installer. On the built-in server, errors are shown in full.
 
+## Visual page builder (drag and drop)
+
+Pages and product pages can be designed visually, in the style of Elementor:
+
+- **Containers** are flex boxes:
+  - row or column, gap, justify and align, wrap;
+  - width, minimum height, boxed or full width;
+  - background (colour, gradient, image, overlay), border, radius, shadow.
+- Containers nest inside each other to make columns. The structure picker sets up 2, 3 or 4 columns, or uneven splits, in one click.
+- **Widgets** (about 55):
+  - **Basic:** heading, text editor, image, button, icon, icon box, image box, icon list, spacer, divider, video.
+  - **General:** counter, testimonial, accordion/FAQ (with FAQ structured data), tabs, social icons, notice.
+  - **Site:** form, breadcrumbs.
+  - **Product (product pages and templates):** title, price with the monthly/annual switch, image, gallery, short description, description, features, benefits, specifications, button, enquiry form, related products, breadcrumbs.
+  - **Ready-made sections:** every block of the classic editor.
+- **Every element has three tabs:**
+  - **Content:** what it shows.
+  - **Style:** colours, typography and sizes.
+  - **Advanced:** margin and padding, width, align-self, order, z-index, CSS id and classes, entrance animation, hide on desktop/tablet/mobile.
+- **Responsive editing:** switch the canvas between desktop, tablet (≤1024px) and mobile (≤767px). Settings marked with the device icon are stored separately for each size.
+- **Editing tools:**
+  - drag widgets from the panel onto the page, and drag elements by their handle to move them;
+  - the right-click menu: duplicate, copy/paste (works across pages), delete, select parent, save as template;
+  - a navigator tree that can also be reordered by dragging;
+  - undo/redo and keyboard shortcuts (Ctrl+Z / Ctrl+Shift+Z, Ctrl+C / V / D, Delete, Ctrl+S).
+- **Drafts and publishing:**
+  - **Save draft** keeps changes private. Previews show the draft, and drafts are also saved automatically every minute.
+  - **Publish / Update** makes the layout live and keeps a revision. The last 30 revisions can be loaded back.
+  - Publishing a live page needs the *Publish pages* permission.
+- **Templates** (Admin → Builder templates):
+  - Save any container, or a whole page, and insert it anywhere.
+  - A **product template** designs product pages. Mark one as the default and every product that uses templates follows it. Each product can also pick another template, keep the classic page, or get its own layout (Product → *Product page design*).
+
+**Opening a page in the builder:** use **Edit with Builder** on the page. Its existing sections are copied into the builder as ready-made sections, so nothing is lost. **Switch back to sections** returns to the classic editor, and the builder layout is kept.
+
+**How it stays exact and safe:**
+- The canvas is the real page in an iframe.
+- Every change is rendered by the same PHP code the public site uses, so what you see is what visitors get.
+- The server cleans everything the editor sends before it is stored or rendered:
+  - unknown widgets and settings are dropped;
+  - every value is checked against its control: numbers, units from a fixed list, valid colours and links;
+  - rich text goes through the HTML sanitiser;
+  - the size and depth of a layout are capped.
+- CSS is generated per element (`.el-<id>`) from these checked values only. There is no free-form HTML or CSS field.
+
 ## Cron
 
 The cron run does three things:
@@ -138,6 +183,7 @@ Error details are never shown on a live site. **Keep a copy of the encryption ke
 |---|---|
 | Multi-country markets (`/`, `/ae`, …) with hreflang | Admin → Countries; `Countries::resolve`; alternates in `<head>` |
 | Page builder (25 block types) with a design panel per section (spacing, background, colours, per-breakpoint) | Admin → Pages → Sections; `app/Cms/Blocks.php`, `Design.php`, `views/blocks/*` |
+| Visual drag-and-drop builder for pages and product pages, with product templates | Edit with Builder; `app/Builder/*`, `public/assets/js/builder*.js` — see above |
 | Page categories, scheduled publishing, preview, duplicate, copy to another market | Admin → Pages |
 | Cities + City Page Generator | Admin → Cities |
 | Products with per-market pricing, categories, brands, comparison tables | Admin → Products |
@@ -162,6 +208,7 @@ Error details are never shown on a live site. **Keep a copy of the encryption ke
 ```
 app/Core       framework: router, DB, sessions, auth, CSRF, crypto, sanitiser, TOTP…
 app/Cms        block registry, design panel, section renderer, icons
+app/Builder    visual builder: elements and controls, layout cleaning, CSS, renderer, storage
 app/Services   business logic (settings, leads, SEO, storage, backups…)
 app/Http       controllers (Admin, Site, Auth) and the form helpers
 database       migrations and the seeder
