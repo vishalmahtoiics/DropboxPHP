@@ -20,7 +20,11 @@ use App\Http\AdminController;
 use App\Services\Content;
 use App\Services\Countries;
 use App\Services\Options;
+use App\Services\Redirects;
+use App\Services\Settings;
 use App\Services\SiteContext;
+use App\Services\Slugs;
+use App\Core\Sanitizer;
 
 /**
  * The visual (drag-and-drop) builder: the editor screen, its canvas iframe,
@@ -49,8 +53,10 @@ final class BuilderController extends AdminController
             'layout' => $layouts['draft'] ?? $layouts['live'],
             'hasDraft' => $layouts['draft'] !== null,
             'canPublish' => Store::canPublish($kind, $owner),
+            'canCode' => Auth::can('builder.code'),
             'status' => $owner['status'] ?? null,
             'productContext' => $kind === 'product' || ($kind === 'template' && $owner['kind'] === 'product'),
+            'settings' => $this->settingsFor($kind, $owner),
             'urls' => [
                 'canvas' => $base . '/canvas',
                 'render' => $base . '/render',
@@ -59,6 +65,7 @@ final class BuilderController extends AdminController
                 'revisions' => $base . '/revisions',
                 'templates' => '/admin/builder/templates.json',
                 'saveTemplate' => '/admin/builder/templates/from-selection',
+                'settings' => $base . '/settings',
                 'back' => $this->backUrl($kind, $owner),
                 'preview' => $this->previewUrl($kind, $owner),
             ],
@@ -86,15 +93,17 @@ final class BuilderController extends AdminController
         $owner = $this->owner($kind, $id);
         $ctx = $this->context($kind, $owner);
         View::share('builderCanvas', true);
+        $chrome = $kind === 'template' && in_array($owner['kind'], ['header', 'footer'], true);
         $html = View::render('admin/builder/canvas', [
             'title' => Store::title($kind, $owner),
-            'page' => $kind === 'page' ? $owner : null,
+            'page' => $kind === 'page' ? $owner : ($chrome ? ['show_header' => 0, 'show_footer' => 0] : null),
+            'chromeKind' => $chrome ? $owner['kind'] : null,
             'seo' => \App\Services\Seo::meta(['title' => Store::title($kind, $owner), 'noindex' => true]),
             'productContext' => $ctx['product'] !== null,
         ], 'layouts/site');
         return Response::html($html)
             ->header('X-Frame-Options', 'SAMEORIGIN')
-            ->header('Content-Security-Policy', "frame-ancestors 'self'; default-src 'self'; script-src 'self' 'nonce-" . nonce() . "'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; connect-src 'self'; form-action 'none'; base-uri 'self'; object-src 'none'")
+            ->header('Content-Security-Policy', "frame-ancestors 'self'; default-src 'self'; script-src 'self' 'nonce-" . nonce() . "'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src https:; connect-src 'self'; form-action 'none'; base-uri 'self'; object-src 'none'")
             ->header('X-Robots-Tag', 'noindex, nofollow')
             ->header('Cache-Control', 'no-store');
     }
@@ -103,7 +112,7 @@ final class BuilderController extends AdminController
     public function render(string $kind, string $id): Response
     {
         $owner = $this->owner($kind, $id);
-        $layout = Layout::normalize($this->layoutInput());
+        $layout = $this->guardCode(Layout::normalize($this->layoutInput()), Store::layouts($kind, $owner));
         $out = Renderer::render($layout, $this->context($kind, $owner) + ['editor' => true]);
         return $this->json(['ok' => true, 'html' => $out['html'], 'css' => $out['css'], 'layout' => $layout]);
     }
@@ -115,7 +124,7 @@ final class BuilderController extends AdminController
         if ($publish && !Store::canPublish($kind, $owner)) {
             throw HttpException::forbidden();
         }
-        $layout = Layout::normalize($this->layoutInput());
+        $layout = $this->guardCode(Layout::normalize($this->layoutInput()), Store::layouts($kind, $owner));
         Store::save($kind, $owner, $layout, $publish);
         if ($publish) {
             Audit::record('updated', ucfirst($kind), (int) $owner['id'], 'Published the builder layout of "' . Store::title($kind, $owner) . '"');
@@ -144,6 +153,98 @@ final class BuilderController extends AdminController
             throw HttpException::notFound();
         }
         return $this->json(['ok' => true, 'layout' => $layout]);
+    }
+
+    /**
+     * Title, address and SEO from the builder's settings dialog. Changing the
+     * address of a live page or product adds a permanent redirect from the
+     * old one, exactly as the regular edit screens do.
+     */
+    public function settings(string $kind, string $id): Response
+    {
+        $owner = $this->owner($kind, $id);
+        $before = $owner;
+        if ($kind === 'template') {
+            $name = Sanitizer::line($this->request->str('title'), 160);
+            if ($name === '') {
+                throw ValidationException::with('title', 'Give the template a name.');
+            }
+            DB::update('builder_templates', ['name' => $name], ['id' => $owner['id']]);
+            return $this->json(['ok' => true, 'title' => $name, 'settings' => $this->settingsFor($kind, DB::first('SELECT * FROM builder_templates WHERE id = ?', [$owner['id']]))]);
+        }
+        $title = Sanitizer::line($this->request->str('title'), $kind === 'page' ? 255 : 200);
+        if ($title === '') {
+            throw ValidationException::with('title', $kind === 'page' ? 'Give the page a title.' : 'Give the product a name.');
+        }
+        $seo = ['seo_title' => Sanitizer::line($this->request->str('seo_title'), 255) ?: null, 'seo_description' => Sanitizer::text($this->request->str('seo_description'), 500) ?: null];
+        $message = 'Settings saved.';
+
+        if ($kind === 'page') {
+            $isHome = $owner['slug'] === '';
+            $slug = $isHome ? '' : Slugs::make($this->request->str('slug'), true);
+            if (!$isHome && $slug === '') {
+                throw ValidationException::with('slug', 'Every page except the homepage needs an address.');
+            }
+            Slugs::assertPageSlug($slug, (int) $owner['country_id'], (int) $owner['id']);
+            DB::update('pages', ['title' => $title, 'slug' => $slug, 'show_header' => $this->request->bool('show_header') ? 1 : 0, 'show_footer' => $this->request->bool('show_footer') ? 1 : 0, 'updated_by_id' => $this->me['id']] + $seo, ['id' => $owner['id']]);
+            if ($slug !== $owner['slug']) {
+                if ($owner['status'] === 'PUBLISHED') {
+                    $country = Countries::find((int) $owner['country_id']);
+                    Redirects::onSlugChange(Countries::href($country, '/' . $owner['slug']), Countries::href($country, '/' . $slug));
+                    $message = 'Address changed. The old address now redirects to the new one.';
+                } else {
+                    $message = 'Address changed.';
+                }
+            }
+            $owner = DB::first('SELECT * FROM pages WHERE id = ?', [$owner['id']]);
+        } else {
+            $slug = Slugs::make($this->request->str('slug') ?: $title);
+            if ($slug === '') {
+                throw ValidationException::with('slug', 'Enter an address.');
+            }
+            if (DB::value('SELECT id FROM products WHERE slug = ? AND id <> ?', [$slug, $owner['id']])) {
+                throw ValidationException::with('slug', 'Another product uses this address.');
+            }
+            DB::update('products', ['name' => $title, 'slug' => $slug] + $seo, ['id' => $owner['id']]);
+            if ($slug !== $owner['slug']) {
+                $message = 'Address changed.';
+                if ($owner['status'] === 'PUBLISHED') {
+                    $base = '/' . trim((string) Settings::get('product', 'base_path', 'products'), '/') . '/';
+                    foreach (Countries::active() as $c) {
+                        Redirects::onSlugChange(Countries::href($c, $base . $owner['slug']), Countries::href($c, $base . $slug));
+                    }
+                    $message = 'Address changed. The old address now redirects to the new one.';
+                }
+            }
+            $owner = DB::first('SELECT * FROM products WHERE id = ?', [$owner['id']]);
+        }
+        Audit::record('updated', ucfirst($kind), (int) $owner['id'], 'Settings changed in the builder', array_intersect_key($before, $owner), $owner);
+        return $this->json(['ok' => true, 'message' => $message, 'title' => Store::title($kind, $owner), 'settings' => $this->settingsFor($kind, $owner)]);
+    }
+
+    /** @return array<string, mixed> what the settings dialog shows */
+    private function settingsFor(string $kind, array $owner): array
+    {
+        if ($kind === 'template') {
+            return ['title' => $owner['name'], 'kind' => $owner['kind']];
+        }
+        if ($kind === 'page') {
+            $country = Countries::find((int) $owner['country_id']);
+            return [
+                'title' => $owner['title'], 'slug' => $owner['slug'], 'isHome' => $owner['slug'] === '',
+                'prefix' => rtrim(base_url() . Countries::href($country, '/'), '/') . '/',
+                'url' => base_url() . Content::pagePath($owner), 'live' => $owner['status'] === 'PUBLISHED',
+                'seo_title' => (string) $owner['seo_title'], 'seo_description' => (string) $owner['seo_description'],
+                'show_header' => (bool) $owner['show_header'], 'show_footer' => (bool) $owner['show_footer'],
+            ];
+        }
+        $base = '/' . trim((string) Settings::get('product', 'base_path', 'products'), '/') . '/';
+        return [
+            'title' => $owner['name'], 'slug' => $owner['slug'],
+            'prefix' => rtrim(base_url() . Countries::href(Countries::adminCurrent(), '/'), '/') . $base,
+            'url' => base_url() . Countries::href(Countries::adminCurrent(), $base . $owner['slug']), 'live' => $owner['status'] === 'PUBLISHED',
+            'seo_title' => (string) $owner['seo_title'], 'seo_description' => (string) $owner['seo_description'],
+        ];
     }
 
     // --- switching a page to the builder -----------------------------------------------
@@ -205,15 +306,20 @@ final class BuilderController extends AdminController
     public function createTemplate(): Response
     {
         $kind = $this->request->str('kind');
-        if (!in_array($kind, ['page', 'section', 'product'], true)) {
+        if (!in_array($kind, ['page', 'section', 'product', 'header', 'footer'], true)) {
             throw ValidationException::with('kind', 'Choose a template type.');
         }
-        $this->authorize($kind === 'product' ? 'products.edit' : 'pages.edit');
+        $this->authorize(match ($kind) { 'product' => 'products.edit', 'header', 'footer' => 'navigation.manage', default => 'pages.edit' });
         $name = $this->request->str('name');
         if ($name === '' || mb_strlen($name) > 160) {
             throw ValidationException::with('name', 'Give the template a name (up to 160 characters).');
         }
-        $layout = $kind === 'product' ? self::starterProductLayout() : Layout::empty();
+        $layout = match ($kind) {
+            'product' => self::starterProductLayout(),
+            'header' => self::starterHeaderLayout(),
+            'footer' => self::starterFooterLayout(),
+            default => Layout::empty(),
+        };
         // Never made the default here: that would change every live product page
         // at once. "Make default" on the templates screen does it, deliberately.
         $id = DB::insert('builder_templates', [
@@ -228,15 +334,24 @@ final class BuilderController extends AdminController
     {
         $tpl = Store::owner('template', $this->id($id));
         $action = $this->request->str('action');
-        if ($action === 'default' && $tpl['kind'] === 'product') {
+        if ($action === 'default' && in_array($tpl['kind'], ['product', 'header', 'footer'], true)) {
             DB::transaction(static function () use ($tpl): void {
-                DB::query("UPDATE builder_templates SET is_default = 0 WHERE kind = 'product'");
+                DB::query('UPDATE builder_templates SET is_default = 0 WHERE kind = ?', [$tpl['kind']]);
                 DB::update('builder_templates', ['is_default' => 1], ['id' => $tpl['id']]);
             });
-            $this->flash('"' . $tpl['name'] . '" now designs every product page that uses the default template.');
+            Audit::record('updated', 'Template', (int) $tpl['id'], 'Made "' . $tpl['name'] . '" the active ' . $tpl['kind']);
+            $this->flash(match ($tpl['kind']) {
+                'header' => '"' . $tpl['name'] . '" is now the header on every page.',
+                'footer' => '"' . $tpl['name'] . '" is now the footer on every page.',
+                default => '"' . $tpl['name'] . '" now designs every product page that uses the default template.',
+            });
         } elseif ($action === 'undefault') {
             DB::update('builder_templates', ['is_default' => 0], ['id' => $tpl['id']]);
-            $this->flash('Products without their own layout use the classic product page again.');
+            $this->flash(match ($tpl['kind']) {
+                'header' => 'The site uses its built-in header again.',
+                'footer' => 'The site uses its built-in footer again.',
+                default => 'Products without their own layout use the classic product page again.',
+            });
         } elseif ($action === 'rename') {
             $name = $this->request->str('name');
             if ($name === '' || mb_strlen($name) > 160) {
@@ -288,7 +403,7 @@ final class BuilderController extends AdminController
         if ($name === '' || mb_strlen($name) > 160) {
             throw ValidationException::with('name', 'Give the template a name (up to 160 characters).');
         }
-        $layout = Layout::normalize($this->layoutInput());
+        $layout = $this->guardCode(Layout::normalize($this->layoutInput()), ['live' => Layout::empty(), 'draft' => null]);
         if (Layout::isEmpty($layout)) {
             throw ValidationException::with('layout', 'There is nothing to save.');
         }
@@ -328,6 +443,17 @@ final class BuilderController extends AdminController
         return ['product' => $productId ? Content::productById($productId, $country) : null, 'page' => null];
     }
 
+    /**
+     * Without the builder.code permission, custom HTML and CSS stay exactly
+     * as they were stored (draft first); anything new is dropped.
+     *
+     * @param array{live: array, draft: ?array} $stored
+     */
+    private function guardCode(array $layout, array $stored): array
+    {
+        return Auth::can('builder.code') ? $layout : Layout::keepCode($layout, $stored['draft'] ?? $stored['live']);
+    }
+
     private function layoutInput(): array
     {
         $raw = $this->request->body['layout'] ?? null;
@@ -363,6 +489,48 @@ final class BuilderController extends AdminController
             $out[] = [(string) $k, (string) $v];
         }
         return $out;
+    }
+
+    /** Logo, menu and a call to action in one row, sticky, collapsing to a menu button on phones. */
+    public static function starterHeaderLayout(): array
+    {
+        return Layout::normalize(['elements' => [[
+            'type' => 'container',
+            'settings' => [
+                'tag' => 'header', 'direction' => 'row', 'align' => 'center', 'justify' => 'space-between', 'gap' => ['size' => 24, 'unit' => 'px'],
+                '_padding' => ['top' => '14', 'right' => '', 'bottom' => '14', 'left' => '', 'unit' => 'px', 'linked' => false],
+                '_bg_type' => 'color', '_bg_color' => '#ffffff', '_border_style' => 'solid', '_border_width' => ['top' => '0', 'right' => '0', 'bottom' => '1', 'left' => '0', 'unit' => 'px', 'linked' => false], '_border_color' => '#e3e8f0',
+                '_position' => 'sticky',
+            ],
+            'children' => [
+                ['type' => 'site_logo', 'settings' => ['show' => 'logo_name']],
+                ['type' => 'nav_menu', 'settings' => ['_order_mobile' => 3]],
+                ['type' => 'container', 'settings' => ['direction' => 'row', 'align' => 'center', 'justify' => 'flex-end', 'gap' => ['size' => 8, 'unit' => 'px']], 'children' => [
+                    ['type' => 'market_switcher'],
+                    ['type' => 'button', 'settings' => ['text' => 'Get a quote', 'link' => '/contact', '_hide_mobile' => true]],
+                ]],
+            ],
+        ]]]);
+    }
+
+    /** Brand, menus and contact details over a copyright line, on the dark brand colour. */
+    public static function starterFooterLayout(): array
+    {
+        $col = static fn (array $children, array $s = []) => ['type' => 'container', 'settings' => $s, 'children' => $children];
+        $heading = static fn (string $t) => ['type' => 'heading', 'settings' => ['title' => $t, 'tag' => 'h3', 'size' => 'small', 'color' => '#ffffff', 'text_transform' => 'uppercase', 'letter_spacing' => ['size' => 1, 'unit' => 'px']]];
+        return Layout::normalize(['elements' => [[
+            'type' => 'container',
+            'settings' => ['tag' => 'footer', '_bg_type' => 'color', '_bg_color' => '#0b1b34', 'text_color' => '#c9d3e3', 'gap' => ['size' => 32, 'unit' => 'px'], '_padding' => ['top' => '56', 'right' => '', 'bottom' => '32', 'left' => '', 'unit' => 'px', 'linked' => false]],
+            'children' => [
+                $col([
+                    $col([['type' => 'site_logo', 'settings' => ['show' => 'logo_name', 'dark' => true, 'color' => '#ffffff']], ['type' => 'text', 'settings' => ['content' => '<p>Authorised Dropbox reseller helping teams buy, deploy and manage Dropbox.</p>']], ['type' => 'social_icons']], ['width' => ['size' => 34, 'unit' => '%'], 'width_mobile' => ['size' => 100, 'unit' => '%']]),
+                    $col([['type' => 'nav_menu', 'settings' => ['menu' => 'FOOTER', 'layout' => 'columns', 'collapse' => 'none', 'color' => '#ffffff', 'heading_color' => '#ffffff']]], ['width' => ['size' => 40, 'unit' => '%'], 'width_mobile' => ['size' => 100, 'unit' => '%']]),
+                    $col([$heading('Contact'), ['type' => 'contact_info', 'settings' => ['icon_color' => '#ffffff']]]),
+                ], ['direction' => 'row', 'direction_tablet' => 'row', 'direction_mobile' => 'column', 'wrap_tablet' => 'wrap', 'gap' => ['size' => 32, 'unit' => 'px']]),
+                ['type' => 'divider', 'settings' => ['color' => 'rgba(255,255,255,.15)', 'gap' => ['size' => 0, 'unit' => 'px']]],
+                $col([['type' => 'copyright'], ['type' => 'nav_menu', 'settings' => ['menu' => 'LEGAL', 'collapse' => 'none', 'color' => '#c9d3e3', 'font_size' => ['size' => 14, 'unit' => 'px']]]], ['direction' => 'row', 'direction_mobile' => 'column', 'justify' => 'space-between', 'align' => 'center']),
+            ],
+        ]]]);
     }
 
     /** A sensible first product template: the classic product page, rebuilt in containers. */

@@ -50,7 +50,12 @@
   }
 
   // --- state --------------------------------------------------------------------------------
-  let doc = { version: 1, elements: Array.isArray(cfg.layout && cfg.layout.elements) ? cfg.layout.elements : [] };
+  const docFrom = (layout) => ({
+    version: 1,
+    elements: Array.isArray(layout && layout.elements) ? layout.elements : [],
+    settings: layout && layout.settings && typeof layout.settings === 'object' && !Array.isArray(layout.settings) ? layout.settings : {},
+  });
+  let doc = docFrom(cfg.layout);
   let selectedId = null;
   let device = 'desktop';
   let dirty = false;
@@ -253,6 +258,7 @@
       } else {
         for (const [type, d] of Object.entries(DEFS)) {
           if (d.category !== cat) continue;
+          if (d.code && !cfg.canCode) continue;
           if (q && !(d.label + ' ' + d.keywords + ' ' + type).toLowerCase().includes(q)) continue;
           tiles.push(tile(d.label, d.icon, { kind: 'new', type }, false));
         }
@@ -440,7 +446,7 @@
     const body = $('[data-bx-settings]');
     const scroll = body.scrollTop;
     body.innerHTML = '';
-    (def.tabs[activeTab] || []).forEach((sec, i) => {
+    (def.tabs[activeTab] || []).filter((sec) => !sec.code || cfg.canCode).forEach((sec, i) => {
       const key = f.el.type + ':' + activeTab + ':' + sec.label;
       const det = h('details', { class: 'bx-sec' }, h('summary', { text: sec.label }));
       det.open = key in openSections ? openSections[key] : i === 0;
@@ -500,6 +506,9 @@
       }
       case 'richtext':
         return fieldShell(c, acc, richText(value ?? '', (html) => set(html)));
+      case 'code':
+        if (!cfg.canCode) return null;
+        return fieldShell(c, acc, codeArea(value ?? '', c.lang, (v) => set(v)));
       case 'select': case 'form': case 'magnet': case 'category': case 'brand': case 'blogcategory': {
         const sel = h('select', { class: 'select' });
         let options;
@@ -703,6 +712,20 @@
     return wrap;
   }
 
+  function codeArea(value, lang, onChange) {
+    const ta = h('textarea', { class: 'textarea bx-code', rows: lang === 'html' ? '14' : '8', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', 'data-lang': lang || '' });
+    ta.value = value;
+    ta.addEventListener('input', () => onChange(ta.value));
+    ta.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab' || e.shiftKey) return;
+      e.preventDefault();
+      const start = ta.selectionStart;
+      ta.setRangeText('  ', start, ta.selectionEnd, 'end');
+      onChange(ta.value);
+    });
+    return ta;
+  }
+
   function richText(html, onChange) {
     const area = h('div', { class: 'bx-rte-area', contenteditable: 'true', role: 'textbox', 'aria-multiline': 'true' });
     area.innerHTML = html;
@@ -850,6 +873,66 @@
     } catch (err) { toast(err.message, 'error'); }
   });
 
+  // --- page / product / template settings --------------------------------------------------
+  const setDialog = $('[data-bx-settings-dialog]');
+  function openSettings() {
+    const st = cfg.settings || {};
+    const host = $('[data-bx-settings-fields]');
+    host.innerHTML = '';
+    const field = (label, input, help) => h('label', { class: 'field' }, h('span', { class: 'label', text: label }), input, help ? h('span', { class: 'help', text: help }) : null);
+    const text = (name, value, attrs = {}) => h('input', Object.assign({ class: 'input', name, value: value ?? '' }, attrs));
+    host.append(field(cfg.kind === 'product' ? 'Product name' : cfg.kind === 'template' ? 'Template name' : 'Page title', text('title', st.title, { required: true, maxlength: '255' })));
+    if (cfg.kind !== 'template') {
+      if (st.isHome) {
+        host.append(field('Address', text('slug', '', { disabled: true, placeholder: st.prefix }), 'This is the homepage; its address cannot change.'));
+      } else {
+        const slug = text('slug', st.slug, { required: true, maxlength: '255', pattern: '[a-z0-9\\-/]+', spellcheck: 'false' });
+        const preview = h('span', { class: 'help bx-url-preview' });
+        const paint = () => { preview.textContent = st.prefix + (slug.value || '…'); };
+        slug.addEventListener('input', () => { slug.value = slug.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-/]/g, ''); paint(); });
+        paint();
+        host.append(h('label', { class: 'field' }, h('span', { class: 'label', text: 'Address (URL)' }), h('span', { class: 'prefix-group' }, h('span', { text: st.prefix.replace(/^https?:\/\//, '') }), slug), preview,
+          h('span', { class: 'help', text: st.live ? 'The page is live: changing the address keeps the old one working with a permanent redirect.' : 'Lower-case letters, numbers and dashes.' })));
+      }
+      host.append(field('SEO title', text('seo_title', st.seo_title, { maxlength: '255', placeholder: st.title }), 'Shown in search results and the browser tab. Blank = the title.'));
+      const desc = h('textarea', { class: 'textarea', name: 'seo_description', rows: '3', maxlength: '500' });
+      desc.value = st.seo_description || '';
+      host.append(field('Meta description', desc));
+    }
+    if (cfg.kind === 'page') {
+      const sw = (name, label, on) => { const cb = h('input', { type: 'checkbox', name, value: '1' }); cb.checked = !!on; return h('label', { class: 'switch' }, cb, h('span', { text: label })); };
+      host.append(h('div', { class: 'row' }, sw('show_header', 'Show the site header', st.show_header), sw('show_footer', 'Show the site footer', st.show_footer)));
+    }
+    if (cfg.canCode) {
+      const css = h('textarea', { class: 'textarea bx-code', rows: '8', spellcheck: 'false', 'data-css': '1', placeholder: '/* CSS for this ' + (cfg.kind === 'template' ? 'template' : cfg.kind) + ' only */' });
+      css.value = (doc.settings && doc.settings.custom_css) || '';
+      host.append(field('Custom CSS', css, 'Applies to this layout only. Saved with the layout (Save draft / Publish).'));
+    }
+    if (st.url) host.append(h('p', { class: 'small muted' }, 'Live address: ', h('a', { href: st.url, target: '_blank', rel: 'noopener', text: st.url })));
+    setDialog.showModal();
+  }
+  $('[data-bx-settings-form]').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const css = $('[data-css]', form);
+    if (css && css.value !== ((doc.settings && doc.settings.custom_css) || '')) {
+      change(() => { doc.settings = Object.assign({}, doc.settings || {}, { custom_css: css.value }); });
+    }
+    const body = {};
+    ['title', 'slug', 'seo_title', 'seo_description'].forEach((k) => { if (form.elements[k] && !form.elements[k].disabled) body[k] = form.elements[k].value; });
+    ['show_header', 'show_footer'].forEach((k) => { if (form.elements[k]) body[k] = form.elements[k].checked ? 1 : 0; });
+    try {
+      const res = await api(cfg.urls.settings, body);
+      cfg.settings = res.settings;
+      $('.bx-doc-title strong').textContent = res.title;
+      document.title = 'Edit with builder: ' + res.title;
+      setDialog.close();
+      toast(res.message || 'Settings saved.');
+      if ('show_header' in body) frame.contentWindow.location.reload();
+    } catch (err) { toast(err.message, 'error'); }
+  });
+  $('[data-bx-page-settings]').addEventListener('click', openSettings);
+
   const revDialog = $('[data-bx-revisions]');
   async function openRevisions() {
     const host = $('[data-bx-revision-list]');
@@ -865,7 +948,7 @@
         h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Load', onclick: async () => {
           try {
             const rev = await api(cfg.urls.revisions + '/' + r.id);
-            change(() => { doc = { version: 1, elements: rev.layout.elements }; });
+            change(() => { doc = docFrom(rev.layout); });
             select(null);
             revDialog.close();
             toast('Revision loaded. Publish to make it live.');
@@ -878,7 +961,7 @@
     try {
       const res = await api(cfg.urls.discard, {});
       cfg.hasDraft = false;
-      change(() => { doc = { version: 1, elements: res.layout.elements || [] }; });
+      change(() => { doc = docFrom(res.layout); });
       setDirty(false);
       select(null);
       revDialog.close();

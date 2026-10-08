@@ -11,6 +11,9 @@ use App\Core\Response;
 use App\Core\Sanitizer;
 use App\Core\ValidationException;
 use App\Http\AdminController;
+use App\Services\MediaReferences;
+use App\Services\Redirects;
+use App\Services\Slugs;
 use App\Services\Storage;
 use App\Services\Uploads;
 
@@ -90,6 +93,47 @@ final class MediaController extends AdminController
         ], ['id' => $media['id']]);
         Audit::record('updated', 'Media', $media['id'], $media['filename']);
         $this->flash('Details saved.');
+        return $this->redirect('/admin/media?item=' . $media['id']);
+    }
+
+    /**
+     * Give a file a new, readable address. The file is moved, every page,
+     * layout and setting that uses the old address is updated, and for files
+     * on this server the old address keeps working (permanent redirect).
+     */
+    public function rename(string $id): Response
+    {
+        $this->authorize('media.edit');
+        $media = $this->find($this->id($id));
+        $stem = trim((string) preg_replace('/-+/', '-', Slugs::make($this->request->str('name'))), '-');
+        $stem = substr($stem, 0, 100);
+        if ($stem === '' || !preg_match('/^[a-z0-9]/', $stem)) {
+            throw ValidationException::with('name', 'Use letters and numbers, e.g. dropbox-business-plan.');
+        }
+        $oldKey = (string) $media['storage_key'];
+        $ext = strtolower(pathinfo($oldKey, PATHINFO_EXTENSION));
+        $dir = dirname($oldKey);
+        $newKey = $dir . '/' . $stem . '.' . $ext;
+        if ($newKey === $oldKey) {
+            $this->flash('That is already the file address.', 'info');
+            return $this->redirect('/admin/media?item=' . $media['id']);
+        }
+        for ($n = 2; DB::value('SELECT id FROM media WHERE storage_key = ?', [$newKey]) || ($media['provider'] === 'local' && Storage::localPath($newKey) !== null); $n++) {
+            $newKey = $dir . '/' . $stem . '-' . $n . '.' . $ext;
+        }
+        try {
+            $newUrl = Storage::rename((string) $media['provider'], $oldKey, $newKey, (string) $media['mime_type']);
+        } catch (\RuntimeException $e) {
+            throw ValidationException::with('name', $e->getMessage());
+        }
+        $oldUrl = (string) $media['url'];
+        DB::update('media', ['storage_key' => $newKey, 'url' => $newUrl, 'filename' => basename($newKey)], ['id' => $media['id']]);
+        $updated = MediaReferences::replace($oldUrl, $newUrl);
+        if ($media['provider'] === 'local') {
+            Redirects::onSlugChange($oldUrl, $newUrl);
+        }
+        Audit::record('updated', 'Media', $media['id'], 'Renamed ' . $oldUrl . ' → ' . $newUrl);
+        $this->flash('Address changed to ' . $newUrl . ($updated ? '. Updated ' . $updated . ' place(s) that used it.' : '.'));
         return $this->redirect('/admin/media?item=' . $media['id']);
     }
 

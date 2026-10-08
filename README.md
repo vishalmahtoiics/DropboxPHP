@@ -75,10 +75,11 @@ Pages and product pages can be designed visually, in the style of Elementor:
   - width, minimum height, boxed or full width;
   - background (colour, gradient, image, overlay), border, radius, shadow.
 - Containers nest inside each other to make columns. The structure picker sets up 2, 3 or 4 columns, or uneven splits, in one click.
-- **Widgets** (about 55):
+- **Widgets** (over 60):
   - **Basic:** heading, text editor, image, button, icon, icon box, image box, icon list, spacer, divider, video.
   - **General:** counter, testimonial, accordion/FAQ (with FAQ structured data), tabs, social icons, notice.
-  - **Site:** form, breadcrumbs.
+  - **Site:** form, breadcrumbs, site logo, menu, country switcher, copyright, contact info.
+  - **Code:** custom HTML (permission-gated).
   - **Product (product pages and templates):** title, price with the monthly/annual switch, image, gallery, short description, description, features, benefits, specifications, button, enquiry form, related products, breadcrumbs.
   - **Ready-made sections:** every block of the classic editor.
 - **Every element has three tabs:**
@@ -99,6 +100,22 @@ Pages and product pages can be designed visually, in the style of Elementor:
   - Save any container, or a whole page, and insert it anywhere.
   - A **product template** designs product pages. Mark one as the default and every product that uses templates follows it. Each product can also pick another template, keep the classic page, or get its own layout (Product → *Product page design*).
 
+- **Header and footer builder** (Admin → Builder templates → *Site header* / *Site footer*):
+  - Design the site header and footer with the same editor.
+  - Site widgets: logo, menu, country switcher, copyright and contact info. The menu shows the market's menu from Admin → Navigation; on phones it becomes a menu button, and the *Columns* layout suits footers.
+  - Containers can be made *sticky* (Advanced → Position).
+  - A new header or footer only goes live when you click **Make active**. Turn it off to return to the built-in one. Pages can still hide the header or footer individually.
+- **Custom code** (needs the *Add custom HTML and CSS in the visual builder* permission; Super Admin has it, and other roles can get it under Roles):
+  - The **Custom HTML** widget, for embeds such as maps or booking calendars, and scripts.
+  - **Custom CSS** on every element (Advanced → Custom CSS, where `selector` means that element) and for the whole page (page settings).
+  - Scripts run on the live page with the page's CSP nonce, but never inside the editor.
+  - CSS is cleaned so it can't close its `<style>` tag or load outside stylesheets.
+  - Staff without the permission can't add or change code. Code that is already in a layout stays exactly as it was when they save.
+- **Changing addresses:**
+  - The builder's ⚙ **settings** dialog changes the page or product title, its address (URL), SEO title and description, and whether the page shows the header and footer.
+  - When a live page's address changes, the old address keeps working with a permanent redirect.
+  - In the **Media library**, *File address* gives a file a readable URL (e.g. `/media/2026/10/dropbox-business-plan.png`). The file is moved, and every page, layout, template and setting that used the old address is updated. For files stored on this server, the old address redirects to the new one.
+
 **Opening a page in the builder:** use **Edit with Builder** on the page. Its existing sections are copied into the builder as ready-made sections, so nothing is lost. **Switch back to sections** returns to the classic editor, and the builder layout is kept.
 
 **How it stays exact and safe:**
@@ -109,7 +126,7 @@ Pages and product pages can be designed visually, in the style of Elementor:
   - every value is checked against its control: numbers, units from a fixed list, valid colours and links;
   - rich text goes through the HTML sanitiser;
   - the size and depth of a layout are capped.
-- CSS is generated per element (`.el-<id>`) from these checked values only. There is no free-form HTML or CSS field.
+- CSS is generated per element (`.el-<id>`) from these checked values only. The only free-form HTML and CSS are the custom-code fields, which need their own permission.
 
 ## Cron
 

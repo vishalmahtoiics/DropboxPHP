@@ -46,7 +46,11 @@ final class Store
     {
         return match ($kind) {
             'product' => 'products.edit',
-            'template' => ($owner['kind'] ?? '') === 'product' ? 'products.edit' : 'pages.edit',
+            'template' => match ($owner['kind'] ?? '') {
+                'product' => 'products.edit',
+                'header', 'footer' => 'navigation.manage', // shown on every page of the site
+                default => 'pages.edit',
+            },
             default => 'pages.edit',
         };
     }

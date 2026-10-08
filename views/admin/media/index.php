@@ -62,6 +62,17 @@ $size = static fn (int $b) => $b > 1048576 ? round($b / 1048576, 1) . ' MB' : ma
                 <div class="input-group mt-1"><input class="input input-sm" readonly value="<?= e($m['url']) ?>" aria-label="File address"><button class="btn btn-secondary btn-sm" type="button" data-copy="<?= e($m['url']) ?>">Copy</button></div>
                 <?php if ($usage): ?><div class="alert alert-info mt-1 small"><span>Used in: <?= e(implode('; ', $usage)) ?></span></div><?php endif; ?>
                 <?php if (can('media.edit')): ?>
+                    <?php $stem = pathinfo((string) $m['storage_key'], PATHINFO_FILENAME); $ext = pathinfo((string) $m['storage_key'], PATHINFO_EXTENSION); $dir = dirname((string) $m['url']); ?>
+                    <form method="post" action="/admin/media/<?= (int) $m['id'] ?>/rename" class="stack mt-2" data-confirm="Change this file's address? Every page that uses it is updated automatically<?= $m['provider'] === 'local' ? ', and the old address keeps working' : '' ?>.">
+                        <?= csrf_field() ?>
+                        <label class="field"><span class="label">File address</span>
+                            <span class="prefix-group"><span class="truncate" style="max-width:45%"><?= e($dir) ?>/</span><input class="input" name="name" value="<?= e($stem) ?>" required maxlength="100" pattern="[A-Za-z0-9\- _]+" spellcheck="false"><span>.<?= e($ext) ?></span></span>
+                            <span class="help">Use words that describe the file, e.g. dropbox-business-plan. Good for SEO.</span>
+                        </label>
+                        <button class="btn btn-secondary btn-block" type="submit"><?= Icons::svg('link', 'icon', 16) ?> Change address</button>
+                    </form>
+                <?php endif; ?>
+                <?php if (can('media.edit')): ?>
                     <form method="post" action="/admin/media/<?= (int) $m['id'] ?>" class="stack mt-2">
                         <?= csrf_field() ?>
                         <?= Form::input('alt_text', 'Alt text', $m['alt_text'], ['help' => 'Describes the image for screen readers and search engines.']) ?>

@@ -19,6 +19,7 @@ final class Permissions
         'pages.edit' => ['pages', 'Edit pages'],
         'pages.delete' => ['pages', 'Delete pages'],
         'pages.publish' => ['pages', 'Publish pages'],
+        'builder.code' => ['pages', 'Add custom HTML and CSS in the visual builder'],
 
         'products.view' => ['products', 'View products'],
         'products.create' => ['products', 'Create products'],

@@ -28,6 +28,7 @@ $i = static fn (string $n, int $s = 18) => Icons::svg($n, 'icon', $s);
             <button type="button" class="bx-tb-btn" data-bx-device="mobile" aria-pressed="false" title="Mobile (767px and below)"><?= $i('smartphone') ?></button>
         </div>
         <div class="bx-topbar-right">
+            <button type="button" class="bx-tb-btn" data-bx-page-settings title="<?= $config['kind'] === 'template' ? 'Template settings' : 'Title, address and SEO' ?>"><?= $i('settings') ?></button>
             <button type="button" class="bx-tb-btn" data-bx-undo title="Undo (Ctrl+Z)" disabled><?= $i('undo') ?></button>
             <button type="button" class="bx-tb-btn" data-bx-redo title="Redo (Ctrl+Shift+Z)" disabled><?= $i('redo') ?></button>
             <button type="button" class="bx-tb-btn" data-bx-navigator title="Navigator (structure)"><?= $i('layers') ?></button>
@@ -84,6 +85,14 @@ $i = static fn (string $n, int $s = 18) => Icons::svg($n, 'icon', $s);
 <dialog class="bx-dialog" data-bx-structure aria-labelledby="bx-structure-title">
     <div class="dialog-head"><h2 id="bx-structure-title">Select your structure</h2><button class="btn btn-ghost btn-icon" type="button" data-close-dialog aria-label="Close"><?= $i('x') ?></button></div>
     <div class="dialog-body"><div class="bx-structures" data-bx-structures></div></div>
+</dialog>
+
+<dialog class="bx-dialog" data-bx-settings-dialog aria-labelledby="bx-set-title">
+    <form method="dialog" data-bx-settings-form>
+        <div class="dialog-head"><h2 id="bx-set-title"><?= $config['kind'] === 'template' ? 'Template settings' : ($config['kind'] === 'product' ? 'Product settings' : 'Page settings') ?></h2><button class="btn btn-ghost btn-icon" type="button" data-close-dialog aria-label="Close"><?= $i('x') ?></button></div>
+        <div class="dialog-body stack" data-bx-settings-fields></div>
+        <div class="dialog-foot"><button class="btn btn-secondary" type="button" data-close-dialog>Cancel</button><button class="btn btn-primary" type="submit">Save settings</button></div>
+    </form>
 </dialog>
 
 <dialog class="bx-dialog" data-bx-revisions aria-labelledby="bx-rev-title">

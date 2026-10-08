@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Site;
 use App\Core\HttpException;
 use App\Core\Response;
 use App\Http\Controller;
+use App\Services\Redirects;
 use App\Services\Storage;
 
 /**
@@ -22,6 +23,11 @@ final class MediaController extends Controller
     {
         $file = Storage::localPath($path);
         if ($file === null) {
+            // A renamed file: its old address redirects to the new one.
+            $redirect = Redirects::match($this->request->path);
+            if ($redirect) {
+                return Response::redirect($redirect['destination'], 301)->header('Cache-Control', 'public, max-age=86400');
+            }
             throw HttpException::notFound();
         }
         $mime = Storage::mimeFor($file);

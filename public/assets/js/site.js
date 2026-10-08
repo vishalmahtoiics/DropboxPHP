@@ -282,4 +282,19 @@
       });
     });
   });
+
+  // --- builder menu widget: menu button on small screens ------------------------------
+  $$('[data-bx-nav]').forEach((nav) => {
+    const btn = $('[data-bx-nav-toggle]', nav);
+    if (!btn) return;
+    const close = () => { nav.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = !nav.classList.contains('is-open');
+      nav.classList.toggle('is-open', open);
+      btn.setAttribute('aria-expanded', String(open));
+    });
+    document.addEventListener('click', (e) => { if (!nav.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  });
 })();

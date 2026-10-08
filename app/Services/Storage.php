@@ -136,7 +136,51 @@ final class Storage
         return $pathStyle ? [$host, '/' . $bucket] : ["$bucket.$host", ''];
     }
 
-    private static function s3(string $method, string $key, string $body, string $mime): void
+    /**
+     * Give a stored file a new key (its address changes). Local files are
+     * moved; S3/R2 objects are copied server-side, then the old one removed.
+     *
+     * @return string the new public URL
+     */
+    public static function rename(string $provider, string $oldKey, string $newKey, string $mime): string
+    {
+        if (!preg_match(self::KEY_PATTERN, $oldKey) || !preg_match(self::KEY_PATTERN, $newKey)) {
+            throw new RuntimeException('Invalid storage key.');
+        }
+        if ($provider === 'local') {
+            $old = self::localPath($oldKey);
+            if ($old === null) {
+                throw new RuntimeException('The file is missing from the server.');
+            }
+            $target = rtrim((string) config('app.upload_dir'), '/') . '/' . $newKey;
+            if (file_exists($target)) {
+                throw new RuntimeException('A file with that address already exists.');
+            }
+            $dir = dirname($target);
+            if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+                throw new RuntimeException('Upload directory is not writable.');
+            }
+            if (!@rename($old, $target)) {
+                if (!@copy($old, $target)) {
+                    throw new RuntimeException('Could not move the file.');
+                }
+                @unlink($old);
+            }
+            return rtrim((string) config('app.media_path'), '/') . '/' . $newKey;
+        }
+        if ($provider !== self::driver()) {
+            throw new RuntimeException('This file is stored on ' . strtoupper($provider) . ', but the media storage is now set to ' . self::driver() . '. Switch it back to rename the file.');
+        }
+        [, $prefix] = self::endpoint();
+        $bucketPath = $prefix !== '' ? $prefix : '/' . (string) Settings::get('storage', 'bucket', '');
+        $source = $bucketPath . '/' . implode('/', array_map('rawurlencode', explode('/', $oldKey)));
+        self::s3('PUT', $newKey, '', $mime, ['x-amz-copy-source' => $source, 'x-amz-metadata-directive' => 'COPY']);
+        self::delete($provider, $oldKey);
+        return self::publicS3Url($newKey);
+    }
+
+    /** @param array<string, string> $extra additional headers, signed with the rest */
+    private static function s3(string $method, string $key, string $body, string $mime, array $extra = []): void
     {
         $access = (string) Settings::get('storage', 'access_key', '');
         $secret = Settings::secret('storage', 'secret_key');
@@ -153,6 +197,9 @@ final class Storage
         if ($method === 'PUT') {
             $headers['content-type'] = $mime;
             $headers['cache-control'] = 'public, max-age=31536000, immutable';
+        }
+        foreach ($extra as $name => $value) {
+            $headers[strtolower($name)] = $value;
         }
         ksort($headers);
         $canonicalHeaders = '';

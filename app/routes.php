@@ -147,6 +147,7 @@ return static function (Router $r): void {
     $r->post('/admin/media/upload', [Admin\MediaController::class, 'upload']);
     $r->post('/admin/media/folders', [Admin\MediaController::class, 'createFolder']);
     $r->post('/admin/media/folders/{id}/delete', [Admin\MediaController::class, 'deleteFolder']);
+    $r->post('/admin/media/{id}/rename', [Admin\MediaController::class, 'rename']);
     $r->post('/admin/media/{id}', [Admin\MediaController::class, 'update']);
     $r->post('/admin/media/{id}/delete', [Admin\MediaController::class, 'destroy']);
 
@@ -195,6 +196,7 @@ return static function (Router $r): void {
     $r->post('/admin/builder/{kind}/{id}/render', [Admin\BuilderController::class, 'render']);
     $r->post('/admin/builder/{kind}/{id}/save', [Admin\BuilderController::class, 'save']);
     $r->post('/admin/builder/{kind}/{id}/discard', [Admin\BuilderController::class, 'discard']);
+    $r->post('/admin/builder/{kind}/{id}/settings', [Admin\BuilderController::class, 'settings']);
     $r->get('/admin/builder/{kind}/{id}/revisions', [Admin\BuilderController::class, 'revisions']);
     $r->get('/admin/builder/{kind}/{id}/revisions/{revision}', [Admin\BuilderController::class, 'revision']);
 

@@ -136,3 +136,44 @@ test('controls clean slider, dimension and link values', function (): void {
     assert_same('', Controls::cleanUrl('javascript:alert(1)'));
     assert_same('', Controls::cleanUrl('//evil.example'));
 });
+
+test('custom CSS cannot escape its style element or load outside code', function (): void {
+    $css = App\Builder\Code::css("selector{color:red}</style><script>alert(1)</script>@import url(//evil.example/x.css);a{background:url(javascript:alert(1))}x{width:expression(alert(1))}", '.el-ab12cd34');
+    assert_contains('.el-ab12cd34{color:red}', $css);
+    assert_not_contains('</style', $css);
+    assert_not_contains('<script', $css);
+    assert_not_contains('@import', $css);
+    assert_not_contains('javascript:', $css);
+    assert_not_contains('expression(', $css);
+});
+
+test('custom HTML: scripts get the page nonce live, and never reach the editor', function (): void {
+    $html = '<div class="map"><iframe src="https://maps.example/embed"></iframe></div><script>window.x=1</script><img src=x onerror="alert(1)"><meta http-equiv="refresh" content="0;url=https://evil.example">';
+    $live = App\Builder\Code::live($html);
+    assert_contains('<script nonce="' . e(nonce()) . '">', $live);
+    $editor = App\Builder\Code::editor($html);
+    assert_not_contains('<script', $editor);
+    assert_not_contains('onerror', $editor);
+    assert_not_contains('<meta', $editor);
+    assert_contains('<iframe src="https://maps.example/embed">', $editor);
+});
+
+test('without the code permission, custom code stays as it was', function (): void {
+    $stored = Layout::normalize(['elements' => [['id' => 'cccc0001', 'type' => 'container', 'settings' => ['_custom_css' => 'selector{color:red}'], 'children' => [
+        ['id' => 'hhhh0001', 'type' => 'html', 'settings' => ['code' => '<p>Original</p>']],
+    ]]], 'settings' => ['custom_css' => 'body{margin:0}']]);
+    $incoming = Layout::normalize(['elements' => [['id' => 'cccc0001', 'type' => 'container', 'settings' => ['_custom_css' => 'selector{display:none}', 'gap' => ['size' => 5, 'unit' => 'px']], 'children' => [
+        ['id' => 'hhhh0001', 'type' => 'html', 'settings' => ['code' => '<script>steal()</script>']],
+        ['id' => 'hhhh0002', 'type' => 'html', 'settings' => ['code' => '<script>new()</script>']],
+        ['id' => 'tttt0001', 'type' => 'heading', 'settings' => ['title' => 'Allowed edit', '_custom_css' => 'selector{x:y}']],
+    ]]], 'settings' => ['custom_css' => 'body{display:none}']]);
+    $kept = Layout::keepCode($incoming, $stored);
+    $con = $kept['elements'][0];
+    assert_same('selector{color:red}', $con['settings']['_custom_css']);
+    assert_same(['size' => 5, 'unit' => 'px'], $con['settings']['gap'], 'ordinary edits still apply');
+    assert_same(2, count($con['children']), 'a new HTML widget is dropped');
+    assert_same('<p>Original</p>', $con['children'][0]['settings']['code']);
+    assert_false(isset($con['children'][1]['settings']['_custom_css']));
+    assert_same('Allowed edit', $con['children'][1]['settings']['title']);
+    assert_same('body{margin:0}', $kept['settings']['custom_css']);
+});

@@ -1,7 +1,7 @@
 /* Builder canvas overlays (inside the editor's iframe only). */
 :root { --bx-blue: #2563eb; --bx-cyan: #0ea5e9; --bx-pink: #db2777; }
 html { scroll-behavior: auto; }
-.bx-root { min-height: 40vh; }
+body.bx-is-empty .bx-root { min-height: 40vh; }
 .bx-root [data-el] { cursor: default; }
 .bx-root a, .bx-root button, .bx-root summary { cursor: pointer; }
 .bx-root .bx-anim { opacity: 1 !important; transform: none !important; }
@@ -13,9 +13,10 @@ html { scroll-behavior: auto; }
 .bx-placeholder-img { display: grid; place-items: center; min-height: 160px; border-radius: 8px; background: repeating-linear-gradient(45deg, #eef2f8, #eef2f8 10px, #f6f8fc 10px, #f6f8fc 20px); color: #7a879c; font: 500 13px system-ui, sans-serif; }
 body.bx-is-empty .bx-root::before { content: 'Your page is empty. Drag a widget from the left, or add a container below.'; display: block; text-align: center; padding: 80px 20px 20px; color: #7a879c; font: 500 15px system-ui, sans-serif; }
 
-/* Hidden-on-device elements stay visible (faded) while editing */
-.bx-root .bx-hide-desktop, .bx-root .bx-hide-tablet, .bx-root .bx-hide-mobile { display: revert !important; opacity: .35; outline: 1px dashed #94a3b8; }
-.bx-root .bx-con.bx-hide-desktop, .bx-root .bx-con.bx-hide-tablet, .bx-root .bx-con.bx-hide-mobile { display: block !important; }
+/* Elements hidden at the current screen size stay visible (faded) while editing */
+@media (min-width: 1025px) { .bx-root .bx-hide-desktop { display: block !important; opacity: .35; outline: 1px dashed #94a3b8; } }
+@media (min-width: 768px) and (max-width: 1024px) { .bx-root .bx-hide-tablet { display: block !important; opacity: .35; outline: 1px dashed #94a3b8; } }
+@media (max-width: 767px) { .bx-root .bx-hide-mobile { display: block !important; opacity: .35; outline: 1px dashed #94a3b8; } }
 
 /* Outlines */
 .bx-ov { position: absolute; pointer-events: none; z-index: 2147483000; box-sizing: border-box; }
@@ -43,3 +44,6 @@ body.bx-is-empty .bx-root::before { content: 'Your page is empty. Drag a widget 
 .bx-add-zone button[data-bx-add-root] { background: var(--bx-pink); color: #fff; }
 .bx-add-zone button:hover { filter: brightness(.92); }
 .bx-add-zone span { margin-left: 6px; }
+.bx-note-small { padding: 6px 10px; font-size: 12px; margin-top: 6px; }
+.bx-chrome-sample { margin: 24px; padding: 60px 20px; border-radius: 10px; background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 12px, #f8fafc 12px, #f8fafc 24px); color: #64748b; text-align: center; font: 500 14px system-ui, sans-serif; }
+.bx-root .bx-nav-toggle { pointer-events: auto; }

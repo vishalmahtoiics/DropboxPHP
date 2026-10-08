@@ -95,6 +95,7 @@ final class Elements
                 'category' => $def['category'],
                 'keywords' => $def['keywords'] ?? '',
                 'context' => $def['context'] ?? '',
+                'code' => !empty($def['code']),
                 'tabs' => $def['tabs'],
             ];
         }
@@ -460,6 +461,16 @@ final class Elements
                     'style' => [],
                 ],
             ],
+            'html' => [
+                'label' => 'Custom HTML', 'icon' => 'pen', 'category' => 'general', 'keywords' => 'code embed script iframe map css custom', 'code' => true,
+                'tabs' => [
+                    'content' => [['label' => 'Custom HTML', 'controls' => [
+                        C::c('code', 'code', 'HTML', '<div class="my-box">Your HTML here</div>', ['code' => true, 'lang' => 'html', 'max' => Code::MAX_HTML, 'help' => 'Embeds (maps, calendars, videos) and scripts are allowed. Scripts run on the live page only, not in the editor.']),
+                        C::c('code', 'css', 'CSS for this widget', '', ['code' => true, 'lang' => 'css', 'max' => Code::MAX_CSS, 'help' => 'Optional. "selector" means this widget, e.g. selector .my-box { padding: 20px }']),
+                    ]]],
+                    'style' => [],
+                ],
+            ],
             'form' => [
                 'label' => 'Form', 'icon' => 'inbox', 'category' => 'site', 'keywords' => 'contact lead enquiry',
                 'tabs' => [
@@ -470,6 +481,86 @@ final class Elements
                         C::c('switch', 'card', 'Show in a card', true),
                     ]]],
                     'style' => [],
+                ],
+            ],
+            'site_logo' => [
+                'label' => 'Site logo', 'icon' => 'dropbox', 'category' => 'site', 'keywords' => 'brand header logo name',
+                'tabs' => [
+                    'content' => [['label' => 'Logo', 'controls' => [
+                        C::c('select', 'show', 'Show', 'logo', ['choices' => ['logo' => 'Logo (or name when there is none)', 'logo_name' => 'Logo and site name', 'name' => 'Site name only']]),
+                        C::c('switch', 'dark', 'Use the logo for dark backgrounds', false, ['help' => 'Set it in Website settings → Brand.']),
+                    ]]],
+                    'style' => [['label' => 'Logo', 'controls' => array_merge([
+                        C::c('choose', 'align', 'Alignment', '', ['responsive' => true, 'choices' => ['' => 'Default', 'flex-start' => 'Left', 'center' => 'Centre', 'flex-end' => 'Right'], 'css' => ['{{W}} .bx-logo' => 'justify-content:{{V}}']]),
+                        C::c('slider', 'height', 'Logo height', ['size' => '', 'unit' => 'px'], ['responsive' => true, 'units' => ['px'], 'min' => 10, 'max' => 200, 'css' => ['{{W}} .bx-logo img' => 'height:{{V}};width:auto']]),
+                        C::c('color', 'color', 'Name colour', '', ['css' => ['{{W}} .bx-logo' => 'color:{{V}}']]),
+                    ], C::typography('', '{{W}} .bx-logo-name'))]],
+                ],
+            ],
+            'nav_menu' => [
+                'label' => 'Menu', 'icon' => 'menu', 'category' => 'site', 'keywords' => 'navigation nav links header footer',
+                'tabs' => [
+                    'content' => [['label' => 'Menu', 'controls' => [
+                        C::c('select', 'menu', 'Menu', 'HEADER', ['choices' => ['HEADER' => 'Header menu', 'FOOTER' => 'Footer menu', 'FOOTER_SECONDARY' => 'Footer — second menu', 'LEGAL' => 'Legal links', 'MOBILE' => 'Mobile menu'], 'help' => 'Menus are edited in Admin → Navigation, for each market.']),
+                        C::c('choose', 'layout', 'Layout', 'horizontal', ['choices' => ['horizontal' => 'Horizontal', 'vertical' => 'Vertical', 'columns' => 'Columns'], 'help' => 'Columns: each top-level link becomes a column heading with its sub-links below — for footers.']),
+                        C::c('select', 'collapse', 'Turn into a menu button on', 'mobile', ['choices' => ['mobile' => 'Mobile', 'tablet' => 'Tablet and mobile', 'none' => 'Never']]),
+                        C::c('text', 'toggle_label', 'Menu button label', 'Menu', ['max' => 40]),
+                        C::c('switch', 'submenus', 'Show sub-menus', true),
+                    ]]],
+                    'style' => [
+                        ['label' => 'Links', 'controls' => array_merge([
+                            C::c('choose', 'align', 'Alignment', '', ['responsive' => true, 'choices' => ['' => 'Default', 'flex-start' => 'Start', 'center' => 'Centre', 'flex-end' => 'End', 'space-between' => 'Spread'], 'css' => ['{{W}} .bx-nav-list' => 'justify-content:{{V}}']]),
+                            C::c('slider', 'gap', 'Space between', ['size' => '', 'unit' => 'px'], ['responsive' => true, 'units' => ['px', 'em'], 'min' => 0, 'max' => 120, 'css' => ['{{W}} .bx-nav-list' => 'gap:{{V}}']]),
+                            C::c('color', 'color', 'Link colour', '', ['css' => ['{{W}} .bx-nav-list > li > a' => 'color:{{V}}']]),
+                            C::c('color', 'hover', 'Hover / current colour', '', ['css' => ['{{W}} .bx-nav-list > li > a:hover, {{W}} .bx-nav-list > li > a.active' => 'color:{{V}}']]),
+                            C::c('color', 'heading_color', 'Column heading colour', '', ['showWhen' => ['layout' => ['columns']], 'css' => ['{{W}} .bx-nav-columns .bx-nav-list > li > a' => 'color:{{V}}']]),
+                        ], C::typography('', '{{W}} .bx-nav-list > li > a'))],
+                        ['label' => 'Sub-menu and mobile panel', 'controls' => [
+                            C::c('color', 'sub_bg', 'Background', '', ['css' => ['{{W}} .bx-sub, {{W}} .bx-nav.is-open .bx-nav-list' => 'background:{{V}}']]),
+                            C::c('color', 'sub_color', 'Link colour', '', ['css' => ['{{W}} .bx-sub a' => 'color:{{V}}']]),
+                            C::c('color', 'toggle_color', 'Menu button colour', '', ['css' => ['{{W}} .bx-nav-toggle' => 'color:{{V}}']]),
+                        ]],
+                    ],
+                ],
+            ],
+            'market_switcher' => [
+                'label' => 'Country switcher', 'icon' => 'globe', 'category' => 'site', 'keywords' => 'market language country region',
+                'tabs' => [
+                    'content' => [['label' => 'Country switcher', 'controls' => [
+                        C::c('choose', 'label', 'Show', 'code', ['choices' => ['code' => 'Code (IN)', 'name' => 'Name (India)']]),
+                    ]]],
+                    'style' => [['label' => 'Switcher', 'controls' => [C::c('color', 'color', 'Colour', '', ['css' => ['{{W}} .market-switch summary' => 'color:{{V}}']])]]],
+                ],
+            ],
+            'copyright' => [
+                'label' => 'Copyright', 'icon' => 'file-text', 'category' => 'site', 'keywords' => 'footer year rights',
+                'tabs' => [
+                    'content' => [['label' => 'Copyright', 'controls' => [
+                        C::c('text', 'text', 'Text', '© {year} {site}. All rights reserved.', ['max' => 300, 'help' => '{year} = this year, {site} = the company name of the market.']),
+                    ]]],
+                    'style' => [['label' => 'Text', 'controls' => array_merge([
+                        C::c('choose', 'align', 'Alignment', '', ['responsive' => true, 'choices' => ['' => 'Default'] + C::alignChoices(), 'css' => ['{{W}}' => 'text-align:{{V}}']]),
+                        C::c('color', 'color', 'Colour', '', ['css' => ['{{W}} .bx-copyright' => 'color:{{V}}']]),
+                    ], C::typography('', '{{W}} .bx-copyright'))]],
+                ],
+            ],
+            'contact_info' => [
+                'label' => 'Contact info', 'icon' => 'phone', 'category' => 'site', 'keywords' => 'phone email address whatsapp hours footer',
+                'tabs' => [
+                    'content' => [['label' => 'Contact info', 'controls' => [
+                        C::c('switch', 'phone', 'Phone', true),
+                        C::c('switch', 'email', 'Email', true),
+                        C::c('switch', 'whatsapp', 'WhatsApp', false),
+                        C::c('switch', 'address', 'Address', true),
+                        C::c('switch', 'hours', 'Business hours', false),
+                        C::c('choose', 'layout', 'Layout', 'vertical', ['choices' => ['vertical' => 'Stacked', 'inline' => 'In a row']]),
+                        C::c('heading', '', 'Values come from the market settings (Admin → Countries).'),
+                    ]]],
+                    'style' => [['label' => 'Contact info', 'controls' => [
+                        C::c('color', 'icon_color', 'Icon colour', '', ['css' => ['{{W}} .bx-contact .icon' => 'color:{{V}}']]),
+                        C::c('color', 'color', 'Text colour', '', ['css' => ['{{W}} .bx-contact, {{W}} .bx-contact a' => 'color:{{V}}']]),
+                        C::c('slider', 'gap', 'Space between', ['size' => '', 'unit' => 'px'], ['units' => ['px'], 'min' => 0, 'max' => 60, 'css' => ['{{W}} .bx-contact' => 'gap:{{V}}']]),
+                    ]]],
                 ],
             ],
             'breadcrumbs' => [

@@ -25,7 +25,8 @@ use App\Core\Sanitizer;
  *
  * Types: text, textarea, richtext, number, slider, dimensions, select,
  *        choose, switch, color, url, image, icon, repeater, list, form,
- *        magnet, products, category, brand, blogcategory, heading (label only)
+ *        magnet, products, category, brand, blogcategory, code (custom
+ *        HTML/CSS, only with the builder.code permission), heading (label only)
  */
 final class Controls
 {
@@ -123,6 +124,13 @@ final class Controls
             self::c('select', '_animation', 'Entrance animation', '', ['choices' => ['' => 'None', 'fade-in' => 'Fade in', 'fade-up' => 'Fade up', 'fade-down' => 'Fade down', 'slide-left' => 'Slide from right', 'slide-right' => 'Slide from left', 'zoom-in' => 'Zoom in']]),
             self::c('number', '_animation_delay', 'Delay (ms)', 0, ['min' => 0, 'max' => 3000, 'showWhen' => ['_animation' => ['fade-in', 'fade-up', 'fade-down', 'slide-left', 'slide-right', 'zoom-in']]]),
         ]];
+        $sections[] = ['label' => 'Position', 'controls' => [
+            self::c('select', '_position', 'Position', '', ['choices' => ['' => 'Default', 'sticky' => 'Sticky (stays on screen while scrolling)', 'relative' => 'Relative']]),
+            self::c('slider', '_sticky_top', 'Distance from the top', ['size' => 0, 'unit' => 'px'], ['units' => ['px', 'vh'], 'min' => 0, 'max' => 500, 'showWhen' => ['_position' => ['sticky']]]),
+        ]];
+        $sections[] = ['label' => 'Custom CSS', 'code' => true, 'controls' => [
+            self::c('code', '_custom_css', 'Custom CSS', '', ['code' => true, 'max' => Code::MAX_CSS, 'lang' => 'css', 'help' => 'Write "selector" for this element, e.g. selector:hover { opacity: .8 }']),
+        ]];
         $sections[] = ['label' => 'Responsive', 'controls' => [
             self::c('switch', '_hide_desktop', 'Hide on desktop', false),
             self::c('switch', '_hide_tablet', 'Hide on tablet', false),
@@ -149,6 +157,9 @@ final class Controls
                 return Sanitizer::line(is_scalar($value) ? (string) $value : '', $max > 0 ? $max : 500);
             case 'textarea':
                 return Sanitizer::text(is_scalar($value) ? (string) $value : '', $max > 0 ? $max : 5000);
+            case 'code':
+                // Custom code (permission-gated); CSS is cleaned when it is output.
+                return str_replace("\0", '', mb_substr(is_string($value) ? $value : '', 0, $max > 0 ? $max : Code::MAX_CSS));
             case 'richtext':
                 return Sanitizer::html(mb_substr(is_string($value) ? $value : '', 0, 60000));
             case 'number':

@@ -59,6 +59,7 @@ function dispatch(Request $request): App\Core\Response
     }
     App\Core\View::resetShared();
     App\Services\SiteContext::reset();
+    App\Builder\Chrome::reset();
     return (new App\Core\Kernel($router))->handle($request);
 }
 

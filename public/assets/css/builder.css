@@ -169,3 +169,10 @@
   .bx-topbar .btn { padding-inline: .6rem; }
   .bx-doc-title { display: none; }
 }
+
+/* Code fields */
+.bx-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; font-size: .76rem !important; line-height: 1.5; white-space: pre; tab-size: 2; background: #0f172a !important; color: #e2e8f0 !important; border-color: #1e293b !important; resize: vertical; }
+.bx-url-preview { word-break: break-all; color: #2563eb; }
+[data-bx-settings-fields] .prefix-group { display: flex; }
+[data-bx-settings-fields] .prefix-group span { display: inline-flex; align-items: center; padding: 0 8px; background: var(--surface-2, #f1f5f9); border: 1px solid var(--border); border-right: 0; border-radius: 6px 0 0 6px; color: var(--muted); font-size: .8rem; white-space: nowrap; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+[data-bx-settings-fields] .prefix-group .input { border-radius: 0 6px 6px 0; }

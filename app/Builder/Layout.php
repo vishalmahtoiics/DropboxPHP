@@ -29,6 +29,76 @@ final class Layout
         return ['version' => self::VERSION, 'elements' => []];
     }
 
+    /**
+     * Custom code stays as it was for staff without the builder.code
+     * permission: HTML widgets and custom CSS from $stored are kept by
+     * element id, new or changed code from $incoming is discarded.
+     */
+    public static function keepCode(array $incoming, array $stored): array
+    {
+        $old = [];
+        $index = static function (array $elements) use (&$index, &$old): void {
+            foreach ($elements as $el) {
+                $old[$el['id']] = $el;
+                if (!empty($el['children'])) {
+                    $index($el['children']);
+                }
+            }
+        };
+        $index($stored['elements'] ?? []);
+        $codeKeys = self::codeKeys();
+        $walk = static function (array $elements) use (&$walk, $old, $codeKeys): array {
+            $out = [];
+            foreach ($elements as $el) {
+                $was = $old[$el['id']] ?? null;
+                if ($was !== null && $was['type'] !== $el['type']) {
+                    $was = null;
+                }
+                if (!empty(Elements::get($el['type'])['code']) && $was === null) {
+                    continue; // a new HTML widget
+                }
+                foreach ($codeKeys[$el['type']] ?? [] as $key) {
+                    if ($was !== null && array_key_exists($key, $was['settings'])) {
+                        $el['settings'][$key] = $was['settings'][$key];
+                    } else {
+                        unset($el['settings'][$key]);
+                    }
+                }
+                if (isset($el['children'])) {
+                    $el['children'] = $walk($el['children']);
+                }
+                $out[] = $el;
+            }
+            return $out;
+        };
+        $incoming['elements'] = $walk($incoming['elements'] ?? []);
+        unset($incoming['settings']['custom_css']);
+        if (isset($stored['settings']['custom_css'])) {
+            $incoming['settings']['custom_css'] = $stored['settings']['custom_css'];
+        }
+        if (isset($incoming['settings']) && $incoming['settings'] === []) {
+            unset($incoming['settings']);
+        }
+        return $incoming;
+    }
+
+    /** @return array<string, list<string>> element type => its code settings */
+    private static function codeKeys(): array
+    {
+        static $keys = null;
+        if ($keys === null) {
+            $keys = [];
+            foreach (array_keys(Elements::all()) as $type) {
+                foreach (Elements::controls($type) as $c) {
+                    if (!empty($c['code'])) {
+                        $keys[$type][] = $c['key'];
+                    }
+                }
+            }
+        }
+        return $keys;
+    }
+
     /** A stored JSON layout, normalised; empty for null or broken JSON. */
     public static function decode(?string $json): array
     {
@@ -71,7 +141,12 @@ final class Layout
             }
             $out[] = $clean;
         }
-        return ['version' => self::VERSION, 'elements' => $out];
+        $layout = ['version' => self::VERSION, 'elements' => $out];
+        $css = is_array($doc) && is_string($doc['settings']['custom_css'] ?? null) ? Controls::clean(['type' => 'code', 'max' => Code::MAX_CSS], $doc['settings']['custom_css']) : '';
+        if (trim($css) !== '') {
+            $layout['settings'] = ['custom_css' => $css];
+        }
+        return $layout;
     }
 
     /** @param array{count:int, ids:array<string,bool>} $state */

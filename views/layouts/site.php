@@ -45,11 +45,11 @@ $canvas = !empty($builderCanvas);
 <body class="site">
 <?= $canvas ? '' : Tracking::bodyStart($tracking, $consent) ?>
 <a class="skip-link" href="#content">Skip to content</a>
-<?php if ($showHeader): ?><?= View::partial('site/partials/header') ?><?php endif; ?>
+<?php if ($showHeader): ?><?= App\Builder\Chrome::header($page ?? null) ?? View::partial('site/partials/header') ?><?php endif; ?>
 <main id="content">
     <?= $content ?>
 </main>
-<?php if ($showFooter): ?><?= View::partial('site/partials/footer') ?><?php endif; ?>
+<?php if ($showFooter): ?><?= App\Builder\Chrome::footer($page ?? null) ?? View::partial('site/partials/footer') ?><?php endif; ?>
 <?php if (!$canvas): ?>
 <?= View::partial('site/partials/popups') ?>
 <?= View::partial('site/partials/consent') ?>

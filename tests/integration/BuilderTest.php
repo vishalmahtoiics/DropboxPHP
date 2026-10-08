@@ -148,3 +148,106 @@ test('the city generator fills placeholders inside builder layouts', function ()
     assert_same('Dropbox in Pune', $layout['elements'][0]['children'][0]['settings']['title']);
     assert_contains('Dropbox in Pune', dispatch(fake_request('GET', '/pune'))->body);
 });
+
+test('custom HTML needs the code permission; with it, scripts run on the live page', function () use ($newPage): void {
+    $id = $newPage('bx-code');
+    $layout = ['elements' => [['type' => 'container', 'children' => [['type' => 'html', 'settings' => ['code' => '<div id="hello">Hi</div><script>window.hello=1</script>']]]]]];
+    sign_in_as('content-marketing'); // no builder.code
+    dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/save', ['layout' => $layout, 'publish' => 1]));
+    assert_not_contains('window.hello', dispatch(fake_request('GET', '/bx-code'))->body, 'dropped without the permission');
+
+    sign_in_as('admin');
+    $render = json_decode(dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/render', ['layout' => $layout]))->body, true);
+    assert_not_contains('<script', $render['html'], 'scripts never run in the editor');
+    dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/save', ['layout' => $layout, 'publish' => 1]));
+    $live = dispatch(fake_request('GET', '/bx-code'))->body;
+    assert_contains('<div id="hello">Hi</div>', $live);
+    assert_true((bool) preg_match('/<script nonce="[^"]+">window\.hello=1<\/script>/', $live), 'the script carries the page nonce');
+});
+
+test('an active header and footer template replace the built-in ones', function () use ($newPage, $india): void {
+    $id = $newPage('bx-chrome');
+    sign_in_as('admin');
+    $nav = DB::insert('navigations', ['country_id' => $india(), 'name' => 'Header', 'location' => 'HEADER']);
+    DB::insert('navigation_items', ['navigation_id' => $nav, 'label' => 'Pricing link', 'url' => '/pricing', 'link_type' => 'INTERNAL', 'sort_order' => 1]);
+    $before = dispatch(fake_request('GET', '/bx-chrome'))->body;
+    assert_contains('class="site-header', $before);
+
+    $res = dispatch(fake_request('POST', '/admin/builder/templates', ['name' => 'Main header', 'kind' => 'header']));
+    assert_same(303, $res->status);
+    $hid = (int) DB::value("SELECT id FROM builder_templates WHERE kind = 'header' ORDER BY id DESC LIMIT 1");
+    assert_same(0, (int) DB::value('SELECT is_default FROM builder_templates WHERE id = ?', [$hid]), 'not live until made active');
+    dispatch(fake_request('POST', '/admin/builder/templates/' . $hid, ['action' => 'default']));
+    App\Builder\Chrome::reset();
+    $after = dispatch(fake_request('GET', '/bx-chrome'))->body;
+    assert_not_contains('class="site-header', $after);
+    assert_contains('bx-site-header', $after);
+    assert_contains('Pricing link', $after, 'the menu widget shows the market menu');
+    assert_contains('data-bx-nav-toggle', $after);
+
+    dispatch(fake_request('POST', '/admin/builder/templates', ['name' => 'Main footer', 'kind' => 'footer']));
+    $fid = (int) DB::value("SELECT id FROM builder_templates WHERE kind = 'footer' ORDER BY id DESC LIMIT 1");
+    dispatch(fake_request('POST', '/admin/builder/templates/' . $fid, ['action' => 'default']));
+    App\Builder\Chrome::reset();
+    $page = dispatch(fake_request('GET', '/bx-chrome'))->body;
+    assert_contains('bx-site-footer', $page);
+    assert_contains('© ' . date('Y'), $page);
+
+    sign_in_as('sales');
+    assert_same(403, dispatch(fake_request('GET', '/admin/builder/template/' . $hid))->status);
+    sign_in_as('admin');
+    dispatch(fake_request('POST', '/admin/builder/templates/' . $hid, ['action' => 'undefault']));
+    dispatch(fake_request('POST', '/admin/builder/templates/' . $fid, ['action' => 'undefault']));
+    App\Builder\Chrome::reset();
+    assert_contains('class="site-header', dispatch(fake_request('GET', '/bx-chrome'))->body);
+});
+
+test('the builder settings dialog changes the address and keeps the old one working', function () use ($newPage): void {
+    $id = $newPage('bx-old-address');
+    $other = $newPage('bx-taken');
+    sign_in_as('content-marketing');
+    $taken = dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/settings', ['title' => 'Renamed', 'slug' => 'bx-taken', 'show_header' => 1, 'show_footer' => 1]));
+    assert_same(302, $taken->status, 'an address in use is refused (JSON callers get 422)');
+    assert_same('bx-old-address', DB::value('SELECT slug FROM pages WHERE id = ?', [$id]));
+    $res = dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/settings', ['title' => 'Renamed page', 'slug' => 'bx-new-address', 'seo_title' => 'New SEO title', 'show_header' => 1, 'show_footer' => 0]));
+    assert_same(200, $res->status);
+    $json = json_decode($res->body, true);
+    assert_contains('redirects', $json['message']);
+    assert_contains('/bx-new-address', $json['settings']['url']);
+    $page = DB::first('SELECT * FROM pages WHERE id = ?', [$id]);
+    assert_same('bx-new-address', $page['slug']);
+    assert_same('New SEO title', $page['seo_title']);
+    assert_same(0, (int) $page['show_footer']);
+    $old = dispatch(fake_request('GET', '/bx-old-address'));
+    assert_same(301, $old->status);
+    assert_same('/bx-new-address', $old->headers['Location']);
+    unset($other);
+});
+
+test('renaming a media file moves it, updates every use and redirects the old address', function () use ($newPage): void {
+    sign_in_as('content-marketing');
+    $tmp = tempnam(sys_get_temp_dir(), 'img');
+    file_put_contents($tmp, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='));
+    $key = date('Y/m') . '/img-' . bin2hex(random_bytes(4)) . '.png';
+    [$provider, $url] = App\Services\Storage::put($tmp, $key, 'image/png');
+    @unlink($tmp);
+    $mid = DB::insert('media', ['filename' => basename($key), 'storage_key' => $key, 'url' => $url, 'provider' => $provider, 'mime_type' => 'image/png', 'kind' => 'IMAGE', 'size' => 68]);
+    $pid = $newPage('bx-media');
+    DB::update('pages', ['editor' => 'builder', 'builder_layout' => Layout::encode(Layout::normalize(['elements' => [['type' => 'container', 'children' => [['type' => 'image', 'settings' => ['src' => $url, 'alt' => 'Plan']]]]]]))], ['id' => $pid]);
+    DB::insert('page_sections', ['page_id' => $pid, 'block_type' => 'imageWidget', 'sort_order' => 0, 'content' => ['image' => $url], 'settings' => App\Cms\Design::defaults()]);
+
+    $res = dispatch(fake_request('POST', '/admin/media/' . $mid . '/rename', ['name' => 'Dropbox Business Plan']));
+    assert_same(303, $res->status);
+    $media = DB::first('SELECT * FROM media WHERE id = ?', [$mid]);
+    assert_same(dirname($key) . '/dropbox-business-plan.png', $media['storage_key']);
+    assert_true(App\Services\Storage::localPath($media['storage_key']) !== null, 'the file moved');
+    assert_same(null, App\Services\Storage::localPath($key));
+    assert_contains($media['url'], (string) DB::value('SELECT builder_layout FROM pages WHERE id = ?', [$pid]));
+    assert_not_contains($url, (string) DB::value('SELECT builder_layout FROM pages WHERE id = ?', [$pid]));
+    assert_not_contains(basename($key), (string) DB::value('SELECT content FROM page_sections WHERE page_id = ?', [$pid]));
+    $old = dispatch(fake_request('GET', $url));
+    assert_same(301, $old->status);
+    assert_same($media['url'], $old->headers['Location']);
+    assert_same(200, dispatch(fake_request('GET', $media['url']))->status);
+    App\Services\Storage::delete('local', $media['storage_key']);
+});

@@ -27,7 +27,7 @@ final class Style
     /** CSS for a whole layout. */
     public static function layout(array $layout): string
     {
-        $buckets = ['desktop' => '', 'tablet' => '', 'mobile' => ''];
+        $buckets = ['desktop' => '', 'tablet' => '', 'mobile' => '', 'custom' => ''];
         self::walk($layout['elements'] ?? [], $buckets);
         $css = $buckets['desktop'];
         foreach (self::MEDIA as $device => $query) {
@@ -35,7 +35,8 @@ final class Style
                 $css .= '@media ' . $query . '{' . $buckets[$device] . '}';
             }
         }
-        return $css;
+        $page = (string) ($layout['settings']['custom_css'] ?? '');
+        return $css . $buckets['custom'] . ($page !== '' ? Code::css($page, '.bx-root') : '');
     }
 
     /** @param array<string, string> $buckets */
@@ -128,6 +129,14 @@ final class Style
             $add('desktop', $w, 'animation-delay:' . (int) $s['_animation_delay'] . 'ms;transition-delay:' . (int) $s['_animation_delay'] . 'ms');
         }
 
+        $position = $s['_position'] ?? '';
+        if ($position === 'sticky') {
+            $top = Controls::cssSlider($s['_sticky_top'] ?? null) ?: '0px';
+            $add('desktop', $w, 'position:sticky;top:' . $top . ';z-index:' . (isset($s['_z']) && $s['_z'] !== '' ? (int) $s['_z'] : 50));
+        } elseif ($position === 'relative') {
+            $add('desktop', $w, 'position:relative');
+        }
+
         $out = [];
         foreach ($rules as $device => $selectors) {
             $css = '';
@@ -137,6 +146,19 @@ final class Style
             if ($css !== '') {
                 $out[$device] = $css;
             }
+        }
+        // Custom CSS goes last so it can override the generated rules.
+        $custom = '';
+        foreach (['_custom_css', 'css'] as $key) {
+            if ($key === 'css' && $type !== 'html') {
+                continue;
+            }
+            if (is_string($s[$key] ?? null) && trim($s[$key]) !== '') {
+                $custom .= Code::css($s[$key], $w);
+            }
+        }
+        if ($custom !== '') {
+            $out['custom'] = $custom;
         }
         return $out;
     }

@@ -67,7 +67,9 @@ final class Security
                 "img-src 'self' data: blob: https:",
                 "media-src 'self' https:",
                 "connect-src 'self' https:",
-                "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.googletagmanager.com",
+                // https: so embeds placed with the builder's Custom HTML widget (maps,
+                // booking calendars) load; only staff with builder.code can add them.
+                "frame-src 'self' https:",
                 "frame-ancestors 'self'",
                 "form-action 'self'",
                 "base-uri 'self'",
