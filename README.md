@@ -1,8 +1,8 @@
-# DropboxPHP
+# Brand CMS & CRM
 
-A CMS and CRM for a Dropbox reseller website, written in plain **PHP 8.1+ and MySQL**. There is no Node, no Composer and no build step: upload the files, open the site, and the installer does the rest.
+A white-label CMS and CRM for a reseller website, written in plain **PHP 8.1+ and MySQL**. The brand is a setting, not part of the code. There is no Node, no Composer and no build step: upload the files, open the site, and the installer does the rest.
 
-It rebuilds every feature of the original Next.js / Prisma app (`wroffy-dev/gworkspace-dropbox`). The [feature map](#feature-map) below lists them.
+It rebuilds every feature of the original Next.js / Prisma app in PHP. The [feature map](#feature-map) below lists them.
 
 ---
 
@@ -66,6 +66,19 @@ php -S 127.0.0.1:8000 -t public public/index.php
 
 Open http://127.0.0.1:8000. You get the same installer. On the built-in server, errors are shown in full.
 
+## Brand name
+
+The brand is set in one place: **Admin → Website settings → General → Brand name** (it starts as "Brand Name"). It appears everywhere on its own:
+- as the logo text, or the first letter of the name when no logo is uploaded;
+- in page titles and SEO;
+- in the footer, copyright and emails;
+- in the authenticator app;
+- in the admin and on the sign-in screen.
+
+**`{brand}` in any text** — page sections, builder widgets, products, blog posts, SEO settings, email templates, menus — shows the brand name. The default texts already use it, for example `%s | {brand}` for page titles. Rename the brand in settings and every page, title and email follows on the next page load. What is stored keeps `{brand}`, so it keeps working after the next rename too.
+
+In the footer copyright, `{site}` is the market's company name (Admin → Countries), which itself can contain `{brand}`, e.g. `{brand} India`.
+
 ## Visual page builder (drag and drop)
 
 Pages and product pages can be designed visually, in the style of Elementor:
@@ -116,7 +129,7 @@ Pages and product pages can be designed visually, in the style of Elementor:
 - **Changing addresses:**
   - The builder's ⚙ **settings** dialog changes the page or product title, its address (URL), SEO title and description, and whether the page shows the header and footer.
   - When a live page's address changes, the old address keeps working with a permanent redirect.
-  - In the **Media library**, *File address* gives a file a readable URL (e.g. `/media/2026/10/dropbox-business-plan.png`). The file is moved, and every page, layout, template and setting that used the old address is updated. For files stored on this server, the old address redirects to the new one.
+  - In the **Media library**, *File address* gives a file a readable URL (e.g. `/media/2026/10/business-plan-brochure.png`). The file is moved, and every page, layout, template and setting that used the old address is updated. For files stored on this server, the old address redirects to the new one.
 
 **Opening a page in the builder:** use **Edit with Builder** on the page. Its existing sections are copied into the builder as ready-made sections, so nothing is lost. **Switch back to sections** returns to the classic editor, and the builder layout is kept.
 
@@ -141,7 +154,7 @@ The cron run does three things:
 Run it every 5 minutes. Admin → Website settings → System shows both options, filled in for your server:
 
 ```cron
-*/5 * * * * cd /path/to/dropboxphp && php bin/console cron > /dev/null 2>&1
+*/5 * * * * cd /path/to/site && php bin/console cron > /dev/null 2>&1
 ```
 
 If the host has no CLI cron, call the HTTP address instead. The installer creates its secret token:

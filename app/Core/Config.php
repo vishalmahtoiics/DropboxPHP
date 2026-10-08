@@ -50,7 +50,7 @@ final class Config
         $db = (array) ($site['database'] ?? []);
         return [
             'app' => [
-                'name' => 'Dropbox Reseller',
+                'name' => 'Brand CMS',
                 'version' => '1.0.0',
                 'env' => $dev ? 'development' : 'production',
                 'debug' => $dev,
@@ -65,7 +65,7 @@ final class Config
                 'media_path' => '/media',
                 'max_upload_bytes' => 10 * 1024 * 1024,
                 'session' => [
-                    'name' => 'dbx_session',
+                    'name' => 'site_session',
                     'lifetime' => 60 * 60 * 12,     // absolute lifetime of a signed-in session
                     'idle' => 60 * 60 * 2,          // signed out after this long without a request
                 ],

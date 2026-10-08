@@ -395,3 +395,5 @@ details summary { cursor: pointer; color: var(--brand); margin: .5rem 0; }
 .check-list { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .2rem; }
 .check-list .ok { color: var(--success); }
 .check-list .bad { color: var(--danger); }
+
+.brand-letter { font-weight: 800; font-size: 1.05rem; line-height: 1; }

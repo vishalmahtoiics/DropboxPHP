@@ -32,7 +32,7 @@ final class Mailer
             return [
                 'host' => $s['host'], 'port' => (int) $s['port'], 'username' => $s['username'],
                 'password' => Settings::secret('email', 'password'), 'encryption' => $s['encryption'],
-                'from' => $s['from_email'], 'from_name' => $s['from_name'], 'reply_to' => $s['reply_to'],
+                'from' => $s['from_email'], 'from_name' => Brand::text((string) $s['from_name']) ?: Brand::name(), 'reply_to' => $s['reply_to'],
             ];
         }
         return [

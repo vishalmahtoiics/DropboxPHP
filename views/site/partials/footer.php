@@ -19,7 +19,7 @@ if ($fs['text_color']) $style .= '--footer-text:' . $fs['text_color'] . ';';
                 <?php if ($site['logo_dark_url'] ?: $site['logo_url']): ?>
                     <img src="<?= e($site['logo_dark_url'] ?: $site['logo_url']) ?>" alt="<?= e($site['site_name']) ?>" height="34" loading="lazy">
                 <?php else: ?>
-                    <span class="logo-mark"><?= Icons::svg('dropbox', 'icon', 20) ?></span><span class="logo-text"><?= e($site['site_name']) ?></span>
+                    <?= App\Services\Brand::mark() ?><span class="logo-text"><?= e($site['site_name']) ?></span>
                 <?php endif; ?>
             </a>
             <?php if ($fs['about']): ?><p><?= e($fs['about']) ?></p><?php endif; ?>

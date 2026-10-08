@@ -25,7 +25,7 @@ $mobileItems = $mobileNav ?? $headerNav;
             <?php if ($site['logo_url']): ?>
                 <img src="<?= e($site['logo_url']) ?>" alt="<?= e($site['site_name']) ?>" height="36">
             <?php else: ?>
-                <span class="logo-mark"><?= Icons::svg('dropbox', 'icon', 22) ?></span><span class="logo-text"><?= e($site['site_name']) ?></span>
+                <?= App\Services\Brand::mark() ?><span class="logo-text"><?= e($site['site_name']) ?></span>
             <?php endif; ?>
         </a>
         <nav class="main-nav" aria-label="Main">

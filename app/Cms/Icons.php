@@ -141,7 +141,6 @@ final class Icons
         'mouse-pointer' => '<path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/>',
         'save' => '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
         'clipboard' => '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
-        'dropbox' => '<path d="m7 3-5 3.2 5 3.2 5-3.2zM17 3l-5 3.2 5 3.2 5-3.2zM2 12.6l5 3.2 5-3.2-5-3.2zM17 9.4l-5 3.2 5 3.2 5-3.2zM7 17l5 3.2 5-3.2-5-3.2z"/>',
     ];
 
     public static function svg(?string $name, string $class = 'icon', int $size = 20, string $label = ''): string

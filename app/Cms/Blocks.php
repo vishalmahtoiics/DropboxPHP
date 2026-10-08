@@ -209,7 +209,7 @@ final class Blocks
                         'backgroundImage' => 'Text over background image',
                     ]]],
                     $eyebrow,
-                    $heading('Buy Dropbox from an authorised partner'),
+                    $heading('Get {brand} for your team'),
                     ['description', 'textarea', 'Description', 'Local billing, expert deployment and support for teams of every size.', ['max' => 1200]],
                     ['bullets', 'list', 'Bullet points', [], ['help' => 'One per line.']],
                     ...$buttons,
@@ -245,7 +245,7 @@ final class Blocks
                 'label' => 'Feature grid', 'group' => 'Content', 'icon' => 'grid',
                 'description' => 'Features or benefits in a grid, each with an icon, title and text.',
                 'fields' => [
-                    $eyebrow, $heading('Why teams choose Dropbox'), $sub, $cols('3'),
+                    $eyebrow, $heading('Why teams choose {brand}'), $sub, $cols('3'),
                     ['style', 'select', 'Card style', 'cards', ['choices' => ['cards' => 'Cards', 'bordered' => 'Bordered', 'plain' => 'Plain']]],
                     ['items', 'repeater', 'Features', [
                         ['icon' => 'shield-check', 'title' => 'Enterprise-grade security', 'text' => 'Encryption, admin controls and compliance built in.', 'link_label' => '', 'link_url' => ''],
@@ -327,7 +327,7 @@ final class Blocks
                 'description' => 'A strong closing message with buttons.',
                 'fields' => [
                     ['style', 'select', 'Style', 'banner', ['choices' => ['banner' => 'Full-width banner', 'card' => 'Card', 'split' => 'Text left, buttons right']]],
-                    $heading('Ready to move your team to Dropbox?'),
+                    $heading('Ready to get started with {brand}?'),
                     ['text', 'textarea', 'Text', 'Get pricing, a free trial and deployment help from our team.', ['max' => 800]],
                     ...$buttons,
                 ],
@@ -339,7 +339,7 @@ final class Blocks
                     $eyebrow, $heading('Frequently asked questions'), $sub,
                     ['layout', 'select', 'Layout', 'accordion', ['choices' => ['accordion' => 'Accordion', 'two-column' => 'Two columns, open']]],
                     ['items', 'repeater', 'Questions', [
-                        ['question' => 'Are you an authorised Dropbox partner?', 'answer' => '<p>Yes. Every licence we sell is genuine and comes with full Dropbox support.</p>'],
+                        ['question' => 'Are you an authorised partner?', 'answer' => '<p>Yes. Every licence we sell is genuine and comes with full manufacturer support.</p>'],
                         ['question' => 'Can I pay in my local currency?', 'answer' => '<p>Yes, with a tax invoice for your business.</p>'],
                     ], ['fields' => [
                         ['question', 'text', 'Question', '', ['max' => 300]],
@@ -415,7 +415,7 @@ final class Blocks
                 'label' => 'Product cards', 'group' => 'Products', 'icon' => 'package',
                 'description' => 'Pricing cards for products from the catalogue, with monthly/annual toggle.',
                 'fields' => [
-                    $eyebrow, $heading('Choose your Dropbox plan'), $sub,
+                    $eyebrow, $heading('Choose your plan'), $sub,
                     ...$productSource,
                     $cols('3'),
                     ['billing', 'select', 'Show price', 'annual', ['choices' => ['annual' => 'Annual (per month)', 'monthly' => 'Monthly', 'toggle' => 'Let visitors toggle']]],
@@ -440,7 +440,7 @@ final class Blocks
                 'fields' => [
                     $eyebrow, $heading('How we compare'), $sub,
                     ['columns', 'repeater', 'Columns', [
-                        ['name' => 'Dropbox', 'subtitle' => 'Business', 'price' => '', 'button_label' => 'Get a quote', 'button_url' => '/contact', 'highlight' => true, 'badge' => 'Recommended'],
+                        ['name' => '{brand}', 'subtitle' => 'Business', 'price' => '', 'button_label' => 'Get a quote', 'button_url' => '/contact', 'highlight' => true, 'badge' => 'Recommended'],
                         ['name' => 'Google Workspace', 'subtitle' => '', 'price' => '', 'button_label' => '', 'button_url' => '', 'highlight' => false, 'badge' => ''],
                         ['name' => 'Microsoft 365', 'subtitle' => '', 'price' => '', 'button_label' => '', 'button_url' => '', 'highlight' => false, 'badge' => ''],
                     ], ['fields' => [

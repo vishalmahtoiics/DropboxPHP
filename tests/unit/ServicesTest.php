@@ -18,8 +18,8 @@ test('money is parsed exactly and formatted per currency', function (): void {
 });
 
 test('slugs are made safe', function (): void {
-    assert_same('dropbox-business-plus', Slugs::make('Dropbox Business+ Plus!'));
-    assert_same('dropbox/business', Slugs::make('Dropbox / Business', true));
+    assert_same('business-plan-pro', Slugs::make('Business+ Plan Pro!'));
+    assert_same('plans/business', Slugs::make('Plans / Business', true));
     assert_same('cafe-and-co', Slugs::make('Café & Co'));
 });
 

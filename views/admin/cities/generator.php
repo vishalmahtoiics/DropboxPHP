@@ -6,10 +6,10 @@ use App\Services\Cities;
 <?php if (!$cities): ?><div class="alert alert-info"><span>Add cities first under <a href="/admin/cities">Cities</a>.</span></div><?php endif; ?>
 <form class="card" method="post" action="/admin/cities/generator"><div class="card-body stack">
     <?= csrf_field() ?>
-    <?= Form::select('template_id', 'Template page', $pages, '', ['required' => true, 'empty' => 'Choose a page to copy', 'help' => 'Write it with placeholders, e.g. "Dropbox resellers in {{city.name}}".']) ?>
+    <?= Form::select('template_id', 'Template page', $pages, '', ['required' => true, 'empty' => 'Choose a page to copy', 'help' => 'Write it with placeholders, e.g. "{brand} in {{city.name}}".']) ?>
     <div class="grid grid-2">
-        <?= Form::input('slug_pattern', 'Address pattern', '{{city.slug}}', ['required' => true, 'help' => '{{city.slug}} for the city landing page, {{city.slug}}/dropbox-business for a sub-page.']) ?>
-        <?= Form::input('title_pattern', 'Title pattern', 'Dropbox in {{city.name}}') ?>
+        <?= Form::input('slug_pattern', 'Address pattern', '{{city.slug}}', ['required' => true, 'help' => '{{city.slug}} for the city landing page, {{city.slug}}/business-plans for a sub-page.']) ?>
+        <?= Form::input('title_pattern', 'Title pattern', '{brand} in {{city.name}}') ?>
     </div>
     <div class="field"><span class="label">Cities</span>
         <label class="check"><input type="checkbox" data-check-all="cities[]"> All</label>

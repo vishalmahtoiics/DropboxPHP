@@ -611,3 +611,6 @@ a.bx-con { color: inherit; text-decoration: none; }
 .bx-contact a { color: inherit; text-decoration: none; }
 .bx-contact .icon { margin-top: .15rem; color: var(--brand); }
 .bx-copyright { margin: 0; font-size: .9rem; }
+
+/* The brand letter used when no logo is uploaded */
+.brand-letter { font-family: var(--font-heading); font-weight: 800; font-size: 1.15rem; line-height: 1; }

@@ -27,8 +27,8 @@ final class Settings
      */
     public const SCHEMA = [
         'website' => [
-            'site_name' => ['s', 'Dropbox Reseller'],
-            'tagline' => ['s', 'Authorised Dropbox Partner'],
+            'site_name' => ['s', 'Brand Name'],
+            'tagline' => ['s', 'Your tagline here'],
             'contact_email' => ['e', ''],
             'contact_phone' => ['s', ''],
             'whatsapp_number' => ['s', ''],
@@ -77,7 +77,7 @@ final class Settings
             'trusted_proxies' => ['s', ''],
         ],
         'footer' => [
-            'about' => ['t', 'Authorised Dropbox reseller helping teams buy, deploy and manage Dropbox.'],
+            'about' => ['t', '{brand} helps teams choose, buy and get the most out of the tools they rely on.'],
             'copyright' => ['s', '© {year} {site}. All rights reserved.'],
             'show_social' => ['b', true],
             'show_contact' => ['b', true],
@@ -87,12 +87,12 @@ final class Settings
             'text_color' => ['c', '#C9D3E3'],
         ],
         'seo' => [
-            'default_title' => ['s', 'Authorised Dropbox Reseller'],
-            'title_template' => ['s', '%s | Dropbox Reseller'],
-            'default_description' => ['t', 'Buy Dropbox Business, Standard, Advanced and Enterprise plans from an authorised partner, with local billing and support.'],
+            'default_title' => ['s', '{brand}'],
+            'title_template' => ['s', '%s | {brand}'],
+            'default_description' => ['t', 'Plans, pricing and expert support from {brand}, with local billing.'],
             'default_og_image' => ['u', ''],
             'twitter_handle' => ['s', ''],
-            'organization_name' => ['s', 'Dropbox Reseller'],
+            'organization_name' => ['s', '{brand}'],
             'organization_logo' => ['u', ''],
             'organization_type' => ['s', 'Organization'],
             'google_verification' => ['s', ''],
@@ -120,7 +120,7 @@ final class Settings
             'username' => ['s', ''],
             'password' => ['x', ''],
             'encryption' => ['s', 'tls'],
-            'from_name' => ['s', 'Dropbox Reseller'],
+            'from_name' => ['s', '{brand}'],
             'from_email' => ['e', ''],
             'reply_to' => ['e', ''],
             'notify_new_lead' => ['b', true],
@@ -131,7 +131,7 @@ final class Settings
         ],
         'blog' => [
             'title' => ['s', 'Blog'],
-            'intro' => ['t', 'News, guides and best practice for teams using Dropbox.'],
+            'intro' => ['t', 'News, guides and best practice from {brand}.'],
             'base_path' => ['s', 'blog'],
             'posts_per_page' => ['i', 9],
             'show_author' => ['b', true],
@@ -140,7 +140,7 @@ final class Settings
             'show_toc' => ['b', true],
             'show_related' => ['b', true],
             'sidebar' => ['b', true],
-            'cta_heading' => ['s', 'Need help choosing a Dropbox plan?'],
+            'cta_heading' => ['s', 'Need help choosing a plan?'],
             'cta_text' => ['t', 'Talk to our team for pricing, migration and deployment support.'],
             'cta_label' => ['s', 'Talk to sales'],
             'cta_url' => ['u', '/contact'],

@@ -19,7 +19,7 @@ final class Mfa
 {
     public static function issuer(): string
     {
-        return (string) (Settings::get('website', 'site_name') ?: config('app.name'));
+        return Brand::name();
     }
 
     /** Start (or continue) enrolment: a pending secret, not yet active. */

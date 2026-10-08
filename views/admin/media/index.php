@@ -67,7 +67,7 @@ $size = static fn (int $b) => $b > 1048576 ? round($b / 1048576, 1) . ' MB' : ma
                         <?= csrf_field() ?>
                         <label class="field"><span class="label">File address</span>
                             <span class="prefix-group"><span class="truncate" style="max-width:45%"><?= e($dir) ?>/</span><input class="input" name="name" value="<?= e($stem) ?>" required maxlength="100" pattern="[A-Za-z0-9\- _]+" spellcheck="false"><span>.<?= e($ext) ?></span></span>
-                            <span class="help">Use words that describe the file, e.g. dropbox-business-plan. Good for SEO.</span>
+                            <span class="help">Use words that describe the file, e.g. business-plan-brochure. Good for SEO.</span>
                         </label>
                         <button class="btn btn-secondary btn-block" type="submit"><?= Icons::svg('link', 'icon', 16) ?> Change address</button>
                     </form>

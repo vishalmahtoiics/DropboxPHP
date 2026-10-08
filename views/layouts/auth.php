@@ -18,7 +18,7 @@ $site = Settings::group('website');
             <?php if ($site['logo_url']): ?>
                 <img src="<?= e($site['logo_url']) ?>" alt="<?= e($site['site_name']) ?>" height="36">
             <?php else: ?>
-                <span class="brand-mark"><?= App\Cms\Icons::svg('dropbox', 'icon', 22) ?></span>
+                <?= App\Services\Brand::mark('brand-mark') ?>
                 <strong><?= e($site['site_name']) ?></strong>
             <?php endif; ?>
         </div>

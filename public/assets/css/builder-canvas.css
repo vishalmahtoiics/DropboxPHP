@@ -36,7 +36,7 @@ body.bx-is-empty .bx-root::before { content: 'Your page is empty. Drag a widget 
 
 /* Drop indicators */
 .bx-dropline { position: absolute; z-index: 2147483001; pointer-events: none; background: var(--bx-pink); border-radius: 2px; box-shadow: 0 0 0 2px rgba(219, 39, 119, .2); }
-.bx-dropbox { position: absolute; z-index: 2147483001; pointer-events: none; border: 2px dashed var(--bx-pink); background: rgba(219, 39, 119, .06); border-radius: 6px; }
+.bx-dropzone { position: absolute; z-index: 2147483001; pointer-events: none; border: 2px dashed var(--bx-pink); background: rgba(219, 39, 119, .06); border-radius: 6px; }
 
 /* "Add" zone below the layout */
 .bx-add-zone { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 24px auto 48px; max-width: 72rem; width: calc(100% - 48px); padding: 26px 16px; border: 2px dashed #c7d2e2; border-radius: 10px; color: #7a879c; font: 500 13px system-ui, sans-serif; background: rgba(248, 250, 252, .8); }

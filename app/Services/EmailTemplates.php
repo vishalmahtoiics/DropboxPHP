@@ -61,7 +61,9 @@ final class EmailTemplates
             }
             $tpl = ['subject' => self::DEFAULTS[$key][1], 'body' => self::DEFAULTS[$key][2]];
         }
-        $vars['site.name'] ??= (string) Settings::get('website', 'site_name');
+        $vars['site.name'] ??= Brand::name();
+        $tpl['subject'] = Brand::text((string) $tpl['subject']);
+        $tpl['body'] = Brand::text((string) $tpl['body']);
         $subject = preg_replace_callback('/\{\{\s*([\w.]+)\s*\}\}/', static fn ($m) => str_replace(["\r", "\n"], ' ', (string) ($vars[$m[1]] ?? '')), (string) $tpl['subject']);
         $body = preg_replace_callback('/\{\{\s*([\w.]+)\s*\}\}/', static function ($m) use ($vars): string {
             $value = (string) ($vars[$m[1]] ?? '');
@@ -77,7 +79,7 @@ final class EmailTemplates
         return '<!doctype html><html><body style="margin:0;background:#f4f6fb;font-family:Arial,Helvetica,sans-serif;color:#0b1b34">'
             . '<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px">'
             . '<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border-radius:12px;overflow:hidden">'
-            . '<tr><td style="background:' . e($color) . ';color:#fff;padding:16px 24px;font-weight:bold;font-size:16px">' . e($site['site_name']) . '</td></tr>'
+            . '<tr><td style="background:' . e($color) . ';color:#fff;padding:16px 24px;font-weight:bold;font-size:16px">' . e(Brand::name()) . '</td></tr>'
             . '<tr><td style="padding:24px;font-size:14px;line-height:1.6">' . $body . '</td></tr>'
             . '</table></td></tr></table></body></html>';
     }

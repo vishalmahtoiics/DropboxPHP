@@ -17,7 +17,7 @@ $close = '</div><div class="card-foot form-actions"><button class="btn btn-prima
     <div class="tab-panel" id="general">
         <?= $open('website', 'general', []) ?>
             <div class="grid grid-2">
-                <?= Form::input('site_name', 'Site name', $s['site_name'], ['required' => true]) ?>
+                <?= Form::input('site_name', 'Brand name', $s['site_name'], ['required' => true, 'maxlength' => 120, 'help' => 'Shown everywhere: logo text, page titles, footer, emails, the authenticator app. In any text on the site you can write {brand} and it shows this name — change it here and it changes everywhere.']) ?>
                 <?= Form::input('tagline', 'Tagline', $s['tagline']) ?>
                 <?= Form::input('contact_email', 'Contact email', $s['contact_email'], ['type' => 'email']) ?>
                 <?= Form::input('contact_phone', 'Contact phone', $s['contact_phone']) ?>
@@ -85,7 +85,7 @@ $close = '</div><div class="card-foot form-actions"><button class="btn btn-prima
     <div class="tab-panel" id="footer" hidden>
         <?= $open('footer', 'footer', ['show_social', 'show_contact', 'show_newsletter']) ?>
             <?= Form::textarea('about', 'About text', $footer['about'], ['rows' => 3]) ?>
-            <?= Form::input('copyright', 'Copyright line', $footer['copyright'], ['help' => '{year} and {site} are replaced automatically.']) ?>
+            <?= Form::input('copyright', 'Copyright line', $footer['copyright'], ['help' => '{year}, {site} (the market\'s company name) and {brand} are replaced automatically.']) ?>
             <div class="grid grid-3">
                 <?= Form::toggle('show_social', 'Social icons', $footer['show_social']) ?>
                 <?= Form::toggle('show_contact', 'Contact details', $footer['show_contact']) ?>

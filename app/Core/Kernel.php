@@ -82,10 +82,28 @@ final class Kernel
         }
 
         Security::apply($response, $request, $surface);
+        if ($surface === 'site') {
+            self::brand($response);
+        }
         if ($surface === 'site' && $request->method === 'GET' && $response->status === 200) {
             Attribution::capture($request, $response);
         }
         return $response;
+    }
+
+    /** "{brand}" in anything a visitor sees becomes the brand name from settings. */
+    public static function brand(Response $response): void
+    {
+        if (!str_contains($response->body, \App\Services\Brand::TOKEN)) {
+            return;
+        }
+        $type = (string) ($response->headers['Content-Type'] ?? '');
+        if (str_contains($type, 'json')) {
+            $name = substr((string) json_encode(\App\Services\Brand::name(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG), 1, -1);
+            $response->body = str_replace(\App\Services\Brand::TOKEN, $name, $response->body);
+        } elseif (str_contains($type, 'html') || str_contains($type, 'xml') || str_contains($type, 'text/plain')) {
+            $response->body = \App\Services\Brand::html($response->body);
+        }
     }
 
     /** Before installation only /install answers; everything else is sent there. */

@@ -15,7 +15,7 @@ jobs:
         image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: dropbox_test
+          MYSQL_DATABASE: site_test
         ports: ['3306:3306']
         options: >-
           --health-cmd="mysqladmin ping -proot"
@@ -41,7 +41,7 @@ jobs:
               'cron_secret' => 'ci-cron-secret-ci-cron-secret',
               'login_path' => '/auth-control-panel/admin',
               'timezone' => 'Asia/Kolkata',
-              'database' => ['host' => '127.0.0.1', 'port' => 3306, 'database' => 'dropbox', 'username' => 'root', 'password' => 'root', 'socket' => ''],
+              'database' => ['host' => '127.0.0.1', 'port' => 3306, 'database' => 'site', 'username' => 'root', 'password' => 'root', 'socket' => ''],
           ];
           PHP
       - name: Tests

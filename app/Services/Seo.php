@@ -22,11 +22,12 @@ final class Seo
     {
         $seo = Settings::group('seo');
         $country = Countries::current();
-        $template = (string) (Countries::setting($country, 'title_template') ?: $seo['title_template'] ?: '%s');
-        $defaultTitle = (string) (Countries::setting($country, 'default_title') ?: $seo['default_title']);
-        $defaultDesc = (string) (Countries::setting($country, 'default_description') ?: $seo['default_description']);
+        $template = Brand::text((string) (Countries::setting($country, 'title_template') ?: $seo['title_template'] ?: '%s'));
+        $defaultTitle = Brand::text((string) (Countries::setting($country, 'default_title') ?: $seo['default_title']));
+        $defaultDesc = Brand::text((string) (Countries::setting($country, 'default_description') ?: $seo['default_description']));
 
-        $raw = trim((string) ($in['title'] ?? ''));
+        $raw = Brand::text(trim((string) ($in['title'] ?? '')));
+        $in['description'] = Brand::text((string) ($in['description'] ?? ''));
         $title = $raw === '' ? $defaultTitle : (!empty($in['raw_title']) ? $raw : str_replace('%s', $raw, $template));
         $desc = trim((string) ($in['description'] ?? '')) ?: $defaultDesc;
         $desc = mb_substr(preg_replace('/\s+/', ' ', strip_tags($desc)) ?? '', 0, 300);
@@ -73,7 +74,7 @@ final class Seo
             '@context' => 'https://schema.org',
             '@type' => Countries::setting($country, 'organization_type') ?: ($seo['organization_type'] ?: 'Organization'),
             '@id' => absolute_url('/#organization'),
-            'name' => Countries::setting($country, 'company_name') ?: ($seo['organization_name'] ?: $site['site_name']),
+            'name' => Brand::text((string) (Countries::setting($country, 'company_name') ?: ($seo['organization_name'] ?: $site['site_name']))),
             'url' => absolute_url(Countries::href($country, '/')),
         ];
         $logo = $seo['organization_logo'] ?: $site['logo_url'];

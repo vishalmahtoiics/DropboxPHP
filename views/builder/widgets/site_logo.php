@@ -13,6 +13,6 @@ $showLogo = $s['show'] !== 'name';
 $showName = $s['show'] !== 'logo' || !$logo;
 ?>
 <a class="bx-logo" href="<?= e(Countries::href(null, '/')) ?>" aria-label="<?= e($site['site_name']) ?> home">
-    <?php if ($showLogo && $logo): ?><img src="<?= e($logo) ?>" alt="<?= $showName ? '' : e($site['site_name']) ?>" height="36"><?php elseif ($showLogo): ?><span class="logo-mark"><?= Icons::svg('dropbox', 'icon', 22) ?></span><?php endif; ?>
+    <?php if ($showLogo && $logo): ?><img src="<?= e($logo) ?>" alt="<?= $showName ? '' : e($site['site_name']) ?>" height="36"><?php elseif ($showLogo): ?><?= App\Services\Brand::mark() ?><?php endif; ?>
     <?php if ($showName): ?><span class="bx-logo-name"><?= e($site['site_name']) ?></span><?php endif; ?>
 </a>

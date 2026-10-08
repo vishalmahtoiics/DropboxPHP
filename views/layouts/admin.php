@@ -25,7 +25,7 @@ $initials = strtoupper(mb_substr($me['name'] ?? '?', 0, 1) . mb_substr(strstr(($
 <div class="shell">
     <aside class="sidebar" id="sidebar" aria-label="Admin navigation">
         <a class="sidebar-brand" href="/admin">
-            <span class="brand-mark"><?= Icons::svg('dropbox', 'icon', 20) ?></span>
+            <?= App\Services\Brand::mark('brand-mark') ?>
             <span class="truncate"><?= e($site['site_name']) ?></span>
         </a>
         <nav>

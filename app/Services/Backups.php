@@ -103,7 +103,7 @@ final class Backups
     {
         $out = fopen($file, 'wb');
         $pdo = DB::pdo();
-        fwrite($out, "-- Dropbox Reseller backup " . date('c') . "\nSET FOREIGN_KEY_CHECKS=0;\nSET NAMES utf8mb4;\n");
+        fwrite($out, "-- Website backup " . date('c') . "\nSET FOREIGN_KEY_CHECKS=0;\nSET NAMES utf8mb4;\n");
         $tables = 0;
         $rows = 0;
         foreach (DB::column("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'") as $table) {

@@ -52,8 +52,8 @@ final class Seeder
              VALUES ('India', 'IN', '', 'en-IN', 'INR', '₹', '+91', 'Asia/Kolkata', 1, 1, 1, 0, ?),
                     ('United Arab Emirates', 'AE', 'ae', 'en-AE', 'AED', 'AED ', '+971', 'Asia/Dubai', 0, 1, 1, 1, ?)",
             [
-                json_encode(['company_name' => 'Dropbox Reseller India', 'sales_phone' => '+91 98765 43210', 'sales_email' => 'sales@example.com', 'whatsapp' => '+919876543210', 'address' => 'Connaught Place, New Delhi 110001', 'business_hours' => 'Mon–Sat, 9:30–18:30 IST', 'tax_label' => 'GSTIN']),
-                json_encode(['company_name' => 'Dropbox Reseller UAE', 'sales_phone' => '+971 4 000 0000', 'sales_email' => 'uae@example.com', 'address' => 'Business Bay, Dubai', 'business_hours' => 'Sun–Thu, 9:00–18:00 GST', 'tax_label' => 'TRN']),
+                json_encode(['company_name' => '{brand} India', 'sales_phone' => '+91 98765 43210', 'sales_email' => 'sales@example.com', 'whatsapp' => '+919876543210', 'address' => 'Connaught Place, New Delhi 110001', 'business_hours' => 'Mon–Sat, 9:30–18:30 IST', 'tax_label' => 'GSTIN']),
+                json_encode(['company_name' => '{brand} UAE', 'sales_phone' => '+971 4 000 0000', 'sales_email' => 'uae@example.com', 'address' => 'Business Bay, Dubai', 'business_hours' => 'Sun–Thu, 9:00–18:00 GST', 'tax_label' => 'TRN']),
             ]
         );
         ($this->out)('Markets: India (/) and UAE (/ae).');
@@ -115,19 +115,19 @@ final class Seeder
     /** @return list<int> */
     private function products(int $in, int $ae, int $quoteForm): array
     {
-        $cat = DB::insert('product_categories', ['name' => 'Dropbox for teams', 'slug' => 'dropbox-teams']);
-        $catP = DB::insert('product_categories', ['name' => 'Dropbox for individuals', 'slug' => 'dropbox-individuals', 'sort_order' => 1]);
-        $brand = DB::insert('brands', ['name' => 'Dropbox', 'slug' => 'dropbox', 'website_url' => 'https://www.dropbox.com']);
+        $cat = DB::insert('product_categories', ['name' => 'For teams', 'slug' => 'teams']);
+        $catP = DB::insert('product_categories', ['name' => 'For individuals', 'slug' => 'individuals', 'sort_order' => 1]);
+        $brand = DB::insert('brands', ['name' => '{brand}', 'slug' => 'main-brand', 'website_url' => '']);
         $plans = [
-            ['Dropbox Plus', 'dropbox-plus', $catP, '2 TB', 1, 1, 999, 833, false, 'For one person who needs space and simple sharing.',
+            ['Plus', 'plus', $catP, '2 TB', 1, 1, 999, 833, false, 'For one person who needs space and simple sharing.',
                 ['2 TB of storage', 'Use on unlimited devices', '30-day file recovery', 'Transfer files up to 50 GB'], 'per month'],
-            ['Dropbox Essentials', 'dropbox-essentials', $catP, '3 TB', 1, 1, 1650, 1375, false, 'For professionals who want to work and share with clients.',
+            ['Essentials', 'essentials', $catP, '3 TB', 1, 1, 1650, 1375, false, 'For professionals who want to work and share with clients.',
                 ['3 TB of storage', '180-day file recovery', 'Branded sharing', 'Transfer files up to 100 GB'], 'per month'],
-            ['Dropbox Business', 'dropbox-business', $cat, '9 TB for the team', 3, null, 1250, 1050, true, 'For small teams that need to collaborate securely.',
+            ['Business', 'business', $cat, '9 TB for the team', 3, null, 1250, 1050, true, 'For small teams that need to collaborate securely.',
                 ['Starts at 9 TB for the team', 'Admin console and user management', '180-day file recovery', 'Transfer files up to 100 GB', 'Unlimited apps integrations'], 'per user / month'],
-            ['Dropbox Business Plus', 'dropbox-business-plus', $cat, '15 TB for the team', 3, null, 2050, 1700, true, 'For growing teams that need advanced controls.',
+            ['Business Plus', 'business-plus', $cat, '15 TB for the team', 3, null, 2050, 1700, true, 'For growing teams that need advanced controls.',
                 ['Starts at 15 TB for the team', '1-year file recovery and version history', 'Tiered admin roles', 'Ransomware detection and recovery', 'Transfer files up to 250 GB'], 'per user / month'],
-            ['Dropbox Enterprise', 'dropbox-enterprise', $cat, 'Custom', 100, null, null, null, false, 'For large organisations with compliance needs.',
+            ['Enterprise', 'enterprise', $cat, 'Custom', 100, null, null, null, false, 'For large organisations with compliance needs.',
                 ['As much space as you need', 'Enterprise login and SSO', 'Advanced security and compliance', 'Dedicated support'], 'contact us'],
         ];
         $ids = [];
@@ -161,8 +161,8 @@ final class Seeder
         $result = [];
         foreach ([$in => 'India', $ae => 'the UAE'] as $cid => $where) {
             $home = $this->page($cid, 'Home', '', [
-                ['hero', ['layout' => 'contentForm', 'eyebrow' => 'Authorised Dropbox Partner in ' . $where, 'heading' => 'Buy Dropbox for your team, with local billing and support',
-                    'description' => 'Genuine Dropbox Business licences, deployed by experts. Get a quote in minutes.',
+                ['hero', ['layout' => 'contentForm', 'eyebrow' => 'Authorised partner in ' . $where, 'heading' => 'Get {brand} for your team, with local billing and support',
+                    'description' => 'Genuine licences, set up by experts. Get a quote in minutes.',
                     'bullets' => ['Local currency invoicing', 'Free migration planning', 'Support from real people'],
                     'primary_label' => 'See plans', 'primary_url' => '/pricing', 'secondary_label' => 'Talk to sales', 'secondary_url' => '/contact',
                     'form_slug' => 'quote', 'form_heading' => 'Get a quote', 'badges' => [['icon' => 'shield-check', 'label' => 'Authorised partner'], ['icon' => 'award', 'label' => '4.9/5 rated']]], ['preset' => 'gradient']],
@@ -177,18 +177,18 @@ final class Seeder
                 ['cta', ['primary_label' => 'Get a quote', 'primary_url' => '/contact', 'secondary_label' => 'Compare plans', 'secondary_url' => '/pricing'], ['preset' => 'brand']],
             ]);
             $pricing = $this->page($cid, 'Pricing', 'pricing', [
-                ['headingText', ['heading' => 'Dropbox pricing', 'body' => '<p>Simple plans, billed in your currency. Annual billing saves up to 20%.</p>'], []],
+                ['headingText', ['heading' => '{brand} pricing', 'body' => '<p>Simple plans, billed in your currency. Annual billing saves up to 20%.</p>'], []],
                 ['productGrid', ['heading' => '', 'source' => 'all', 'billing' => 'toggle', 'limit' => 6], []],
                 ['productTable', ['heading' => 'Compare every plan', 'source' => 'all', 'rows' => ['Storage', 'Users', 'File recovery']], ['preset' => 'muted']],
                 ['faq', [], []],
             ]);
             $contact = $this->page($cid, 'Contact', 'contact', [
-                ['formBlock', ['heading' => 'Talk to our Dropbox team', 'form_slug' => 'contact', 'bullets' => ['Pricing and quotes', 'Migration and deployment', 'Renewals and upgrades']], []],
+                ['formBlock', ['heading' => 'Talk to the {brand} team', 'form_slug' => 'contact', 'bullets' => ['Pricing and quotes', 'Migration and deployment', 'Renewals and upgrades']], []],
                 ['contactDetails', [], ['preset' => 'muted']],
             ]);
             $about = $this->page($cid, 'About us', 'about', [
-                ['headingText', ['heading' => 'About us', 'body' => '<p>We help organisations buy, deploy and get the most from Dropbox.</p>'], []],
-                ['imageContent', ['heading' => 'Partners, not just resellers', 'bullets' => ['Certified Dropbox specialists', 'Hundreds of successful deployments', 'Local support team']], []],
+                ['headingText', ['heading' => 'About us', 'body' => '<p>{brand} helps organisations choose, buy and get the most from the tools they rely on.</p>'], []],
+                ['imageContent', ['heading' => 'Partners, not just resellers', 'bullets' => ['Certified specialists', 'Hundreds of successful deployments', 'Local support team']], []],
             ]);
             $privacy = $this->page($cid, 'Privacy policy', 'privacy-policy', [
                 ['richText', ['body' => '<h1>Privacy policy</h1><p>This policy explains what personal data we collect, why, and your rights. Replace this text with your own policy.</p>', 'max_width' => 'narrow'], []],
@@ -225,7 +225,7 @@ final class Seeder
         $plans = DB::insert('navigation_items', ['navigation_id' => $header, 'label' => 'Plans', 'link_type' => 'PAGE', 'page_id' => $pages['pricing'], 'sort_order' => 0, 'mega_menu' => 0]);
         $products = DB::all('SELECT id, name, short_description FROM products ORDER BY sort_order');
         foreach ($products as $i => $p) {
-            DB::insert('navigation_items', ['navigation_id' => $header, 'parent_id' => $plans, 'label' => $p['name'], 'link_type' => 'PRODUCT', 'product_id' => $p['id'], 'description' => mb_substr((string) $p['short_description'], 0, 120), 'icon' => 'dropbox', 'sort_order' => $i]);
+            DB::insert('navigation_items', ['navigation_id' => $header, 'parent_id' => $plans, 'label' => $p['name'], 'link_type' => 'PRODUCT', 'product_id' => $p['id'], 'description' => mb_substr((string) $p['short_description'], 0, 120), 'icon' => 'package', 'sort_order' => $i]);
         }
         DB::insert('navigation_items', ['navigation_id' => $header, 'label' => 'Blog', 'link_type' => 'INTERNAL', 'url' => '/blog', 'sort_order' => 1]);
         DB::insert('navigation_items', ['navigation_id' => $header, 'label' => 'About', 'link_type' => 'PAGE', 'page_id' => $pages['about'], 'sort_order' => 2]);
@@ -248,17 +248,17 @@ final class Seeder
 
     private function blog(int $countryId): void
     {
-        $guides = DB::insert('blog_categories', ['name' => 'Guides', 'slug' => 'guides', 'description' => 'How-tos for Dropbox admins and teams.']);
+        $guides = DB::insert('blog_categories', ['name' => 'Guides', 'slug' => 'guides', 'description' => 'How-tos for admins and teams.']);
         $news = DB::insert('blog_categories', ['name' => 'News', 'slug' => 'news', 'sort_order' => 1]);
         $tagSec = DB::insert('blog_tags', ['name' => 'Security', 'slug' => 'security']);
         $tagMig = DB::insert('blog_tags', ['name' => 'Migration', 'slug' => 'migration']);
         $author = DB::value('SELECT id FROM users ORDER BY id LIMIT 1');
         $posts = [
-            ['How to choose the right Dropbox plan for your team', 'choose-dropbox-plan', $guides, [$tagMig],
+            ['How to choose the right plan for your team', 'choose-the-right-plan', $guides, [$tagMig],
                 '<h2>Start with storage and users</h2><p>Count the people who need access and estimate how much data you will move.</p><h2>Think about recovery</h2><p>Longer version history protects you from mistakes and ransomware.</p><h3>Business vs Business Plus</h3><p>Business Plus adds a year of file recovery and advanced admin roles.</p><h2>Talk to a partner</h2><p>An authorised partner can quote in your currency and plan the migration.</p>'],
-            ['Five Dropbox security settings every admin should turn on', 'dropbox-security-settings', $guides, [$tagSec],
+            ['Five security settings every admin should turn on', 'security-settings-checklist', $guides, [$tagSec],
                 '<h2>1. Two-step verification</h2><p>Require it for every member.</p><h2>2. Device approvals</h2><p>Limit how many devices each user can link.</p><h2>3. Sharing controls</h2><p>Decide who can share outside the team.</p><h2>4. Ransomware detection</h2><p>Get alerts and roll back in one click.</p><h2>5. Activity reports</h2><p>Review sign-ins and sharing regularly.</p>'],
-            ['Migrating from Google Drive to Dropbox without downtime', 'google-drive-to-dropbox', $news, [$tagMig],
+            ['Switching to {brand} without downtime', 'switch-without-downtime', $news, [$tagMig],
                 '<h2>Plan the cut-over</h2><p>Migrate in waves, team by team.</p><h2>Keep permissions</h2><p>Map shared drives to team folders before you move a single file.</p>'],
         ];
         foreach ($posts as $i => [$title, $slug, $cat, $tags, $content]) {
@@ -278,7 +278,7 @@ final class Seeder
     private function leads(int $countryId, array $products, int $formId): void
     {
         $samples = [
-            ['Ananya Rao', 'ananya@example.com', 'Northwind Pvt Ltd', 'NEW', 'google', 'cpc', 'dropbox-brand'],
+            ['Ananya Rao', 'ananya@example.com', 'Northwind Pvt Ltd', 'NEW', 'google', 'cpc', 'brand-search'],
             ['Rahul Mehta', 'rahul@example.com', 'Acme Studios', 'CONTACTED', 'linkedin', 'social', 'q3-teams'],
             ['Fatima Khan', 'fatima@example.com', 'Blue Ocean Traders', 'QUALIFIED', 'google', 'organic', ''],
             ['Vikram Singh', 'vikram@example.com', 'Delta Engineering', 'PROPOSAL', 'newsletter', 'email', 'sept-offer'],

@@ -73,3 +73,38 @@ test('uploads are checked by content, not by extension', function (): void {
     assert_throws(ValidationException::class, fn () => App\Services\Uploads::store(['name' => 'shell.phtml', 'tmp_name' => $tmp, 'size' => 1, 'error' => 0], null));
     @unlink($tmp);
 });
+
+test('the brand name comes from settings and {brand} follows it everywhere', function () use ($page): void {
+    App\Services\Settings::save('website', ['site_name' => 'Acme & Co'], true);
+    App\Services\Settings::save('seo', ['title_template' => '%s | {brand}'], true);
+    App\Services\Settings::flush();
+    $id = $page('brand-page', 'PUBLISHED', [['headingText', ['heading' => 'Welcome to {brand}', 'body' => '<p>{brand} makes it easy.</p>']]]);
+    $body = dispatch(fake_request('GET', '/brand-page'))->body;
+    assert_contains('Welcome to Acme &amp; Co', $body, 'escaped once in content');
+    assert_contains('<title>T brand-page | Acme &amp; Co</title>', $body, 'title template');
+    assert_contains('Acme &amp; Co makes it easy.', $body);
+    assert_not_contains('{brand}', $body);
+    assert_contains('brand-letter', $body, 'no logo: the brand letter');
+    assert_contains('>A</span>', $body);
+
+    // Renaming changes every page on the next load.
+    App\Services\Settings::save('website', ['site_name' => 'Globex'], true);
+    App\Services\Settings::flush();
+    assert_contains('Welcome to Globex', dispatch(fake_request('GET', '/brand-page'))->body);
+
+    // The editor keeps the placeholder as written.
+    sign_in_as('content-marketing');
+    $sid = (int) DB::value('SELECT id FROM page_sections WHERE page_id = ?', [$id]);
+    assert_contains('Welcome to {brand}', dispatch(fake_request('GET', '/admin/sections/' . $sid))->body);
+    App\Services\Settings::save('website', ['site_name' => 'Brand Name'], true);
+    App\Services\Settings::save('seo', ['title_template' => '%s | {brand}'], true);
+});
+
+test('{brand} in JSON responses stays valid JSON', function (): void {
+    App\Services\Settings::save('website', ['site_name' => 'Say "Hi" Ltd'], true);
+    App\Services\Settings::flush();
+    $r = new App\Core\Response('{"message":"Thanks from {brand}"}', 200, ['Content-Type' => 'application/json']);
+    App\Core\Kernel::brand($r);
+    assert_same('Thanks from Say "Hi" Ltd', json_decode($r->body, true)['message']);
+    App\Services\Settings::save('website', ['site_name' => 'Brand Name'], true);
+});

@@ -33,7 +33,7 @@
   const selectBox = make('bx-ov bx-ov-select');
   const toolbar = document.createElement('div'); toolbar.className = 'bx-toolbar'; selectBox.appendChild(toolbar);
   const dropLine = make('bx-dropline');
-  const dropBox = make('bx-dropbox');
+  const dropZone = make('bx-dropzone');
 
   const elById = (id) => (id ? root.querySelector('[data-el="' + CSS.escape(id) + '"]') : null);
   const isContainer = (node) => node && node.classList.contains('bx-con');
@@ -205,7 +205,7 @@
     hideDrop();
   });
 
-  function hideDrop() { dropLine.hidden = true; dropBox.hidden = true; dropTarget = null; }
+  function hideDrop() { dropLine.hidden = true; dropZone.hidden = true; dropTarget = null; }
 
   /** Children of a container (or the root) that are layout elements. */
   const kidsOf = (inner) => Array.from(inner.children).filter((c) => c.hasAttribute('data-el'));
@@ -289,13 +289,13 @@
   function showDrop(t) {
     const kids = kidsOf(t.inner);
     const ax = axisOf(t.inner);
-    dropBox.hidden = true;
+    dropZone.hidden = true;
     dropLine.hidden = false;
     if (!kids.length) {
       const r = pageRect(t.inner === root ? root : t.inner);
       dropLine.hidden = true;
-      dropBox.hidden = false;
-      place(dropBox, { left: r.left, top: r.top, width: r.width, height: Math.max(r.height, 40) });
+      dropZone.hidden = false;
+      place(dropZone, { left: r.left, top: r.top, width: r.width, height: Math.max(r.height, 40) });
       return;
     }
     const ref = kids[Math.min(t.index, kids.length - 1)];
@@ -342,6 +342,6 @@
   if ('ResizeObserver' in window) new ResizeObserver(() => updateSelection()).observe(root);
   root.addEventListener('load', () => updateSelection(), true);
 
-  hoverBox.hidden = true; selectBox.hidden = true; dropLine.hidden = true; dropBox.hidden = true;
+  hoverBox.hidden = true; selectBox.hidden = true; dropLine.hidden = true; dropZone.hidden = true;
   send({ type: 'bx:ready' });
 })();

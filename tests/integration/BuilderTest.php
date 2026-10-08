@@ -139,14 +139,14 @@ test('templates: save a selection, insert it with fresh ids', function () use ($
 
 test('the city generator fills placeholders inside builder layouts', function () use ($newPage, $india): void {
     $tplPage = $newPage('bx-city-template', 'DRAFT');
-    DB::update('pages', ['editor' => 'builder', 'builder_layout' => Layout::encode(Layout::normalize(['elements' => [['type' => 'container', 'children' => [['type' => 'heading', 'settings' => ['title' => 'Dropbox in {{city.name}}']]]]]]))], ['id' => $tplPage]);
+    DB::update('pages', ['editor' => 'builder', 'builder_layout' => Layout::encode(Layout::normalize(['elements' => [['type' => 'container', 'children' => [['type' => 'heading', 'settings' => ['title' => 'Services in {{city.name}}']]]]]]))], ['id' => $tplPage]);
     $city = DB::insert('cities', ['country_id' => $india(), 'name' => 'Pune', 'slug' => 'pune']);
     $user = sign_in_as('admin');
     $out = App\Services\Cities::generate($tplPage, [$city], '{{city.slug}}', '', true, (int) $user['id']);
     assert_same(1, count($out['created']));
     $layout = Layout::decode((string) DB::value('SELECT builder_layout FROM pages WHERE id = ?', [$out['created'][0]['id']]));
-    assert_same('Dropbox in Pune', $layout['elements'][0]['children'][0]['settings']['title']);
-    assert_contains('Dropbox in Pune', dispatch(fake_request('GET', '/pune'))->body);
+    assert_same('Services in Pune', $layout['elements'][0]['children'][0]['settings']['title']);
+    assert_contains('Services in Pune', dispatch(fake_request('GET', '/pune'))->body);
 });
 
 test('custom HTML needs the code permission; with it, scripts run on the live page', function () use ($newPage): void {
@@ -236,10 +236,10 @@ test('renaming a media file moves it, updates every use and redirects the old ad
     DB::update('pages', ['editor' => 'builder', 'builder_layout' => Layout::encode(Layout::normalize(['elements' => [['type' => 'container', 'children' => [['type' => 'image', 'settings' => ['src' => $url, 'alt' => 'Plan']]]]]]))], ['id' => $pid]);
     DB::insert('page_sections', ['page_id' => $pid, 'block_type' => 'imageWidget', 'sort_order' => 0, 'content' => ['image' => $url], 'settings' => App\Cms\Design::defaults()]);
 
-    $res = dispatch(fake_request('POST', '/admin/media/' . $mid . '/rename', ['name' => 'Dropbox Business Plan']));
+    $res = dispatch(fake_request('POST', '/admin/media/' . $mid . '/rename', ['name' => 'Business Plan Brochure']));
     assert_same(303, $res->status);
     $media = DB::first('SELECT * FROM media WHERE id = ?', [$mid]);
-    assert_same(dirname($key) . '/dropbox-business-plan.png', $media['storage_key']);
+    assert_same(dirname($key) . '/business-plan-brochure.png', $media['storage_key']);
     assert_true(App\Services\Storage::localPath($media['storage_key']) !== null, 'the file moved');
     assert_same(null, App\Services\Storage::localPath($key));
     assert_contains($media['url'], (string) DB::value('SELECT builder_layout FROM pages WHERE id = ?', [$pid]));

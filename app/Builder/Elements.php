@@ -377,7 +377,7 @@ final class Elements
                 'label' => 'Testimonial', 'icon' => 'quote', 'category' => 'general', 'keywords' => 'review quote customer',
                 'tabs' => [
                     'content' => [['label' => 'Testimonial', 'controls' => [
-                        C::c('textarea', 'quote', 'Quote', 'They made moving our whole team to Dropbox painless.', ['max' => 2000]),
+                        C::c('textarea', 'quote', 'Quote', 'They made switching our whole team over painless.', ['max' => 2000]),
                         C::c('image', 'photo', 'Photo', ''),
                         C::c('text', 'name', 'Name', 'Priya Sharma', ['max' => 120]),
                         C::c('text', 'role', 'Title / company', 'IT Manager, Acme Ltd', ['max' => 200]),
@@ -484,11 +484,11 @@ final class Elements
                 ],
             ],
             'site_logo' => [
-                'label' => 'Site logo', 'icon' => 'dropbox', 'category' => 'site', 'keywords' => 'brand header logo name',
+                'label' => 'Site logo', 'icon' => 'star', 'category' => 'site', 'keywords' => 'brand header logo name',
                 'tabs' => [
                     'content' => [['label' => 'Logo', 'controls' => [
                         C::c('select', 'show', 'Show', 'logo', ['choices' => ['logo' => 'Logo (or name when there is none)', 'logo_name' => 'Logo and site name', 'name' => 'Site name only']]),
-                        C::c('switch', 'dark', 'Use the logo for dark backgrounds', false, ['help' => 'Set it in Website settings → Brand.']),
+                        C::c('switch', 'dark', 'Use the logo for dark backgrounds', false, ['help' => 'Logos and the brand name are set in Website settings.']),
                     ]]],
                     'style' => [['label' => 'Logo', 'controls' => array_merge([
                         C::c('choose', 'align', 'Alignment', '', ['responsive' => true, 'choices' => ['' => 'Default', 'flex-start' => 'Left', 'center' => 'Centre', 'flex-end' => 'Right'], 'css' => ['{{W}} .bx-logo' => 'justify-content:{{V}}']]),

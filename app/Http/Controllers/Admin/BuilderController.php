@@ -17,6 +17,7 @@ use App\Core\Response;
 use App\Core\ValidationException;
 use App\Core\View;
 use App\Http\AdminController;
+use App\Services\Brand;
 use App\Services\Content;
 use App\Services\Countries;
 use App\Services\Options;
@@ -105,7 +106,7 @@ final class BuilderController extends AdminController
             'seo' => \App\Services\Seo::meta(['title' => Store::title($kind, $owner), 'noindex' => true]),
             'productContext' => $ctx['product'] !== null,
         ], 'layouts/site');
-        return Response::html($html)
+        return Response::html(Brand::html($html))
             ->header('X-Frame-Options', 'SAMEORIGIN')
             ->header('Content-Security-Policy', "frame-ancestors 'self'; default-src 'self'; script-src 'self' 'nonce-" . nonce() . "'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; frame-src https:; connect-src 'self'; form-action 'none'; base-uri 'self'; object-src 'none'")
             ->header('X-Robots-Tag', 'noindex, nofollow')
@@ -118,7 +119,7 @@ final class BuilderController extends AdminController
         $owner = $this->owner($kind, $id);
         $layout = $this->guardCode(Layout::normalize($this->layoutInput()), Store::layouts($kind, $owner));
         $out = Renderer::render($layout, $this->context($kind, $owner) + ['editor' => true]);
-        return $this->json(['ok' => true, 'html' => $out['html'], 'css' => $out['css'], 'layout' => $layout]);
+        return $this->json(['ok' => true, 'html' => Brand::html($out['html']), 'css' => $out['css'], 'layout' => $layout]);
     }
 
     public function save(string $kind, string $id): Response
@@ -527,7 +528,7 @@ final class BuilderController extends AdminController
             'settings' => ['tag' => 'footer', '_bg_type' => 'color', '_bg_color' => '#0b1b34', 'text_color' => '#c9d3e3', 'gap' => ['size' => 32, 'unit' => 'px'], '_padding' => ['top' => '56', 'right' => '', 'bottom' => '32', 'left' => '', 'unit' => 'px', 'linked' => false]],
             'children' => [
                 $col([
-                    $col([['type' => 'site_logo', 'settings' => ['show' => 'logo_name', 'dark' => true, 'color' => '#ffffff']], ['type' => 'text', 'settings' => ['content' => '<p>Authorised Dropbox reseller helping teams buy, deploy and manage Dropbox.</p>']], ['type' => 'social_icons']], ['width' => ['size' => 34, 'unit' => '%'], 'width_mobile' => ['size' => 100, 'unit' => '%']]),
+                    $col([['type' => 'site_logo', 'settings' => ['show' => 'logo_name', 'dark' => true, 'color' => '#ffffff']], ['type' => 'text', 'settings' => ['content' => '<p>{brand} helps teams choose, buy and get the most out of the tools they rely on.</p>']], ['type' => 'social_icons']], ['width' => ['size' => 34, 'unit' => '%'], 'width_mobile' => ['size' => 100, 'unit' => '%']]),
                     $col([['type' => 'nav_menu', 'settings' => ['menu' => 'FOOTER', 'layout' => 'columns', 'collapse' => 'none', 'color' => '#ffffff', 'heading_color' => '#ffffff']]], ['width' => ['size' => 40, 'unit' => '%'], 'width_mobile' => ['size' => 100, 'unit' => '%']]),
                     $col([$heading('Contact'), ['type' => 'contact_info', 'settings' => ['icon_color' => '#ffffff']]]),
                 ], ['direction' => 'row', 'direction_tablet' => 'row', 'direction_mobile' => 'column', 'wrap_tablet' => 'wrap', 'gap' => ['size' => 32, 'unit' => 'px']]),

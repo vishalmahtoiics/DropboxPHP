@@ -108,7 +108,7 @@ final class MediaController extends AdminController
         $stem = trim((string) preg_replace('/-+/', '-', Slugs::make($this->request->str('name'))), '-');
         $stem = substr($stem, 0, 100);
         if ($stem === '' || !preg_match('/^[a-z0-9]/', $stem)) {
-            throw ValidationException::with('name', 'Use letters and numbers, e.g. dropbox-business-plan.');
+            throw ValidationException::with('name', 'Use letters and numbers, e.g. business-plan-brochure.');
         }
         $oldKey = (string) $media['storage_key'];
         $ext = strtolower(pathinfo($oldKey, PATHINFO_EXTENSION));

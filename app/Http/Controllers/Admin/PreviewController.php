@@ -65,6 +65,7 @@ final class PreviewController extends AdminController
     /** Previews may be shown in the editor's iframe, never indexed, never cached. */
     private function framed(Response $r): Response
     {
+        \App\Core\Kernel::brand($r);
         return $r->header('X-Frame-Options', 'SAMEORIGIN')
             ->header('Content-Security-Policy', "frame-ancestors 'self'; default-src 'self'; script-src 'self' 'nonce-" . nonce() . "'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; form-action 'self'; base-uri 'self'")
             ->header('X-Robots-Tag', 'noindex, nofollow')
