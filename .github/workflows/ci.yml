@@ -31,13 +31,17 @@ jobs:
         run: |
           find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
           php -l bin/console > /dev/null
+      - name: Write config.php
+        run: |
+          cat > config.php <<'PHP'
+          <?php
+          return [
+              'app' => ['env' => 'testing', 'key' => 'base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='],
+              'database' => [
+                  'host' => '127.0.0.1', 'port' => 3306, 'username' => 'root', 'password' => 'root',
+                  'database' => 'dropbox', 'test_database' => 'dropbox_test',
+              ],
+          ];
+          PHP
       - name: Tests
-        env:
-          APP_KEY: base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: dropbox
-          DB_USERNAME: root
-          DB_PASSWORD: root
-          TEST_DB_DATABASE: dropbox_test
         run: php tests/run.php

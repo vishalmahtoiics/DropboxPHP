@@ -4,27 +4,12 @@ declare(strict_types=1);
 
 use App\Core\Config;
 use App\Core\Csrf;
-use App\Core\Env;
 use App\Core\Session;
 
 /**
  * Global helpers. Kept deliberately small: escaping, configuration and a few
  * view conveniences. Anything with logic lives in a class.
  */
-
-function env(string $key, mixed $default = null): mixed
-{
-    $value = Env::get($key, $default);
-    if (!is_string($value)) {
-        return $value;
-    }
-    return match (strtolower($value)) {
-        'true', '(true)' => true,
-        'false', '(false)' => false,
-        'null', '(null)' => null,
-        default => $value,
-    };
-}
 
 function config(string $key, mixed $default = null): mixed
 {

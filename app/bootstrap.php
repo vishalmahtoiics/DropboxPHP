@@ -29,9 +29,7 @@ spl_autoload_register(static function (string $class): void {
 
 require BASE_PATH . '/app/helpers.php';
 
-App\Core\Env::load(BASE_PATH . '/.env');
-
-date_default_timezone_set((string) env('APP_TIMEZONE', 'UTC'));
+date_default_timezone_set((string) config('app.timezone', 'UTC'));
 mb_internal_encoding('UTF-8');
 
 App\Core\ErrorHandler::register();

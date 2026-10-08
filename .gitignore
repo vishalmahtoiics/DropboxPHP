@@ -1,4 +1,4 @@
-/.env
+/config.php
 /vendor/
 /storage/uploads/*
 /storage/logs/*

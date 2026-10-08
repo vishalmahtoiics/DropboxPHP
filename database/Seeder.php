@@ -17,19 +17,23 @@ use App\Services\EmailTemplates;
  *
  *  - permission catalogue and the four built-in roles
  *  - India (default, served from /) and the UAE (/ae)
- *  - the first administrator from SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
- *    (an existing account keeps its password; only its role is restored)
+ *  - the first administrator, asked for in the terminal when there is none yet
  *  - email templates
- *  - demo content when SEED_DEMO_CONTENT is true and the site is empty
+ *  - demo content when the site is empty (skip with --no-demo)
  */
 final class Seeder
 {
     /** @var callable(string): void */
     private $out;
 
-    public function __construct(callable $out)
+    /** @var (callable(string, bool): string)|null */
+    private $ask;
+
+    /** @param (callable(string, bool): string)|null $ask prompts for the first admin; null skips it */
+    public function __construct(callable $out, ?callable $ask = null, private readonly bool $demo = true)
     {
         $this->out = $out;
+        $this->ask = $ask;
     }
 
     public function run(): void
@@ -43,7 +47,7 @@ final class Seeder
         EmailTemplates::seed();
         ($this->out)('Email templates ready.');
 
-        if (env('SEED_DEMO_CONTENT', true) && (int) DB::value('SELECT COUNT(*) FROM pages') === 0) {
+        if ($this->demo && (int) DB::value('SELECT COUNT(*) FROM pages') === 0) {
             $this->demo();
             ($this->out)('Demo content created.');
         }
@@ -65,28 +69,32 @@ final class Seeder
 
     private function admin(): void
     {
-        $email = strtolower(trim((string) env('SEED_ADMIN_EMAIL', '')));
-        $password = (string) env('SEED_ADMIN_PASSWORD', '');
-        if ($email === '') {
-            ($this->out)('SEED_ADMIN_EMAIL not set — no administrator created. Run: php bin/console user:create');
-            return;
-        }
         $roleId = (int) DB::value("SELECT id FROM roles WHERE slug = 'super-admin'");
-        $existing = DB::first('SELECT id FROM users WHERE email = ?', [$email]);
-        if ($existing) {
-            DB::update('users', ['role_id' => $roleId, 'status' => 'ACTIVE', 'deleted_at' => null], ['id' => $existing['id']]);
-            ($this->out)("Administrator $email exists — role restored, password unchanged.");
+        if (DB::value('SELECT COUNT(*) FROM users WHERE role_id = ? AND deleted_at IS NULL', [$roleId])) {
+            ($this->out)('Administrator already exists.');
             return;
         }
-        if ($error = Auth::passwordError($password, $email)) {
-            ($this->out)("SEED_ADMIN_PASSWORD rejected: $error");
+        if ($this->ask === null) {
+            ($this->out)('No administrator yet. Run: php bin/console user:create');
             return;
         }
-        DB::insert('users', [
-            'email' => $email, 'name' => 'Administrator', 'password_hash' => Auth::hash($password),
-            'role_id' => $roleId, 'status' => 'ACTIVE', 'password_changed_at' => now(),
-        ]);
-        ($this->out)("Administrator $email created. Sign in at " . config('app.url') . config('app.login_path'));
+        ($this->out)('Create the first administrator:');
+        for ($try = 0; $try < 3; $try++) {
+            $email = strtolower(trim(($this->ask)('  Email: ', false)));
+            $name = trim(($this->ask)('  Name: ', false)) ?: 'Administrator';
+            $password = ($this->ask)('  Password (10+ chars, upper + lower case and a number): ', true);
+            $error = filter_var($email, FILTER_VALIDATE_EMAIL) ? Auth::passwordError($password, $email) : 'Enter a valid email address.';
+            if ($error === null) {
+                DB::insert('users', [
+                    'email' => $email, 'name' => $name, 'password_hash' => Auth::hash($password),
+                    'role_id' => $roleId, 'status' => 'ACTIVE', 'password_changed_at' => now(),
+                ]);
+                ($this->out)("Administrator $email created. Sign in at " . config('app.url') . config('app.login_path'));
+                return;
+            }
+            ($this->out)('  ' . $error);
+        }
+        ($this->out)('No administrator created. Run: php bin/console user:create');
     }
 
     // --- demo content ----------------------------------------------------------

@@ -21,7 +21,7 @@ final class Storage
 
     public static function driver(): string
     {
-        $d = strtolower((string) env('STORAGE_DRIVER', 'local'));
+        $d = strtolower((string) config('storage.driver', 'local'));
         return in_array($d, ['local', 's3', 'r2'], true) ? $d : 'local';
     }
 
@@ -106,7 +106,7 @@ final class Storage
 
     private static function publicS3Url(string $key): string
     {
-        $public = rtrim((string) env('S3_PUBLIC_URL', ''), '/');
+        $public = rtrim((string) config('storage.public_url', ''), '/');
         if ($public !== '') {
             return $public . '/' . $key;
         }
@@ -114,13 +114,19 @@ final class Storage
         return 'https://' . $host . $pathPrefix . '/' . $key;
     }
 
+    private static function region(): string
+    {
+        $region = (string) config('storage.region', '');
+        return $region !== '' ? $region : (self::driver() === 'r2' ? 'auto' : 'us-east-1');
+    }
+
     /** @return array{0:string,1:string} host, path prefix */
     private static function endpoint(): array
     {
-        $bucket = (string) env('S3_BUCKET', '');
-        $region = (string) env('S3_REGION', 'us-east-1');
-        $endpoint = (string) env('S3_ENDPOINT', '');
-        $pathStyle = (bool) env('S3_FORCE_PATH_STYLE', self::driver() === 'r2');
+        $bucket = (string) config('storage.bucket', '');
+        $region = self::region();
+        $endpoint = (string) config('storage.endpoint', '');
+        $pathStyle = (bool) (config('storage.path_style') ?? self::driver() === 'r2');
         if ($endpoint !== '') {
             $host = (string) parse_url($endpoint, PHP_URL_HOST);
             return $pathStyle ? [$host, '/' . $bucket] : [$bucket . '.' . $host, ''];
@@ -131,10 +137,10 @@ final class Storage
 
     private static function s3(string $method, string $key, string $body, string $mime): void
     {
-        $access = (string) env('S3_ACCESS_KEY', '');
-        $secret = (string) env('S3_SECRET_KEY', '');
-        $region = (string) env('S3_REGION', 'auto');
-        if ($access === '' || $secret === '' || env('S3_BUCKET', '') === '') {
+        $access = (string) config('storage.access_key', '');
+        $secret = (string) config('storage.secret_key', '');
+        $region = self::region();
+        if ($access === '' || $secret === '' || (string) config('storage.bucket', '') === '') {
             throw new RuntimeException('S3 storage is not configured.');
         }
         [$host, $prefix] = self::endpoint();

@@ -11,6 +11,6 @@ Options -Indexes
     RewriteEngine On
     RewriteRule (^|/)\. - [F,L]
     RewriteRule ^(app|bin|config|database|storage|tests|views|docs|vendor)(/|$) - [F,L]
-    RewriteRule ^(composer\.(json|lock)|phpunit\.xml|README\.md)$ - [F,L]
+    RewriteRule ^(config(\.sample)?\.php|composer\.(json|lock)|phpunit\.xml|README\.md)$ - [F,L]
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>

@@ -2,33 +2,25 @@
 
 declare(strict_types=1);
 
-$path = static function (string $value): string {
-    if ($value === '') {
-        return $value;
-    }
-    return str_starts_with($value, '/') || preg_match('#^[A-Za-z]:[\\\\/]#', $value)
-        ? rtrim($value, '/\\')
-        : BASE_PATH . '/' . trim($value, '/\\');
-};
-
+// Defaults. Override them in config.php at the project root (see config.sample.php).
 return [
     'name' => 'Dropbox Reseller',
     'version' => '1.0.0',
-    'env' => (string) env('APP_ENV', 'production'),
-    'debug' => (bool) env('APP_DEBUG', false),
-    'url' => rtrim((string) env('APP_URL', 'http://localhost:8000'), '/'),
-    'key' => (string) env('APP_KEY', ''),
-    'timezone' => (string) env('APP_TIMEZONE', 'UTC'),
-    'login_path' => '/' . trim((string) env('LOGIN_PATH', '/auth-control-panel/admin'), '/'),
-    'canonical_host_redirect' => (bool) env('CANONICAL_HOST_REDIRECT', true),
-    'trusted_proxies' => array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', ''))))),
+    'env' => 'production',
+    'debug' => false,
+    'url' => 'http://localhost:8000',
+    'key' => '',
+    'timezone' => 'UTC',
+    'login_path' => '/auth-control-panel/admin',
+    'canonical_host_redirect' => true,
+    'trusted_proxies' => [],
 
-    'upload_dir' => $path((string) env('UPLOAD_DIR', 'storage/uploads')),
-    'media_path' => '/' . trim((string) env('MEDIA_PUBLIC_PATH', '/media'), '/'),
-    'max_upload_bytes' => (int) round(((float) env('MAX_UPLOAD_SIZE_MB', 10)) * 1024 * 1024),
+    'upload_dir' => 'storage/uploads',
+    'media_path' => '/media',
+    'max_upload_mb' => 10,
 
-    'backup_dir' => $path((string) env('BACKUP_DIR', 'storage/backups')),
-    'cron_secret' => (string) env('CRON_SECRET', ''),
+    'backup_dir' => 'storage/backups',
+    'cron_secret' => '',
 
     'session' => [
         'name' => 'dbx_session',

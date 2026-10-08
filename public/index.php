@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /*
  * Front controller. The web server's document root is this directory, so
- * nothing outside it — application code, .env, storage, uploads — can be
+ * nothing outside it — application code, config.php, storage, uploads — can be
  * requested directly.
  */
 

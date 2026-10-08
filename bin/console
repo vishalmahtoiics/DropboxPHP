@@ -6,9 +6,9 @@ declare(strict_types=1);
 /*
  * Command-line tasks. Run from the project root:
  *
- *   php bin/console key:generate        write a new APP_KEY into .env
+ *   php bin/console key:generate        create config.php and fill in its key and cron secret
  *   php bin/console migrate             apply pending database migrations
- *   php bin/console db:seed             roles, permissions, first admin, demo content
+ *   php bin/console db:seed [--no-demo] roles, permissions, markets, first admin, demo content
  *   php bin/console user:create         create a Super Admin interactively
  *   php bin/console user:reset-mfa      clear a user's authenticator (lost phone)
  *   php bin/console cron                run scheduled jobs (backups, publishing, cleanup)
@@ -44,26 +44,35 @@ $ask = static function (string $prompt, bool $hidden = false): string {
 
 switch ($command) {
     case 'key:generate':
-        $key = 'base64:' . base64_encode(random_bytes(32));
-        if (in_array('--raw', $args, true) || in_array('--show', $args, true)) {
-            $out(in_array('--raw', $args, true) ? bin2hex(random_bytes(32)) : $key);
+        if (in_array('--raw', $args, true)) {
+            $out(bin2hex(random_bytes(32)));
             break;
         }
-        $env = BASE_PATH . '/.env';
-        if (!is_file($env)) {
-            copy(BASE_PATH . '/.env.example', $env);
+        $file = BASE_PATH . '/config.php';
+        if (!is_file($file)) {
+            copy(BASE_PATH . '/config.sample.php', $file);
+            $out('config.php created from config.sample.php.');
         }
-        $contents = (string) file_get_contents($env);
-        if (preg_match('/^APP_KEY=.+$/m', $contents) && !in_array('--force', $args, true)) {
-            $out('APP_KEY is already set. Use --force to replace it (this makes stored secrets unreadable).');
-            exit(1);
-        }
-        $contents = preg_match('/^APP_KEY=.*$/m', $contents)
-            ? preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=' . $key, $contents)
-            : $contents . PHP_EOL . 'APP_KEY=' . $key . PHP_EOL;
-        file_put_contents($env, $contents);
-        @chmod($env, 0600);
-        $out('APP_KEY written to .env');
+        $contents = (string) file_get_contents($file);
+        $force = in_array('--force', $args, true);
+        $fill = static function (string $name, string $value) use (&$contents, $force, $out): void {
+            $pattern = "/('" . $name . "'\\s*=>\\s*)'([^']*)'/";
+            if (!preg_match($pattern, $contents, $m)) {
+                $out("No '$name' entry found in config.php — add it to the 'app' section.");
+                return;
+            }
+            if ($m[2] !== '' && !$force) {
+                $out("'$name' is already set." . ($name === 'key' ? ' Use --force to replace it (stored secrets become unreadable).' : ''));
+                return;
+            }
+            $contents = (string) preg_replace($pattern, '${1}' . "'" . $value . "'", $contents, 1);
+            $out("'$name' written to config.php.");
+        };
+        $fill('key', 'base64:' . base64_encode(random_bytes(32)));
+        $fill('cron_secret', bin2hex(random_bytes(24)));
+        file_put_contents($file, $contents);
+        @chmod($file, 0600);
+        $out('Keep a copy of the key somewhere safe.');
         break;
 
     case 'migrate':
@@ -79,7 +88,8 @@ switch ($command) {
 
     case 'db:seed':
         require BASE_PATH . '/database/Seeder.php';
-        (new Seeder($out))->run();
+        $interactive = function_exists('stream_isatty') && stream_isatty(STDIN);
+        (new Seeder($out, $interactive ? $ask : null, !in_array('--no-demo', $args, true)))->run();
         break;
 
     case 'user:create':
@@ -127,7 +137,8 @@ switch ($command) {
         $out('PHP        ' . PHP_VERSION);
         $out('Env        ' . config('app.env') . (config('app.debug') ? ' (debug)' : ''));
         $out('URL        ' . config('app.url'));
-        $out('APP_KEY    ' . (strlen((string) config('app.key')) >= 16 ? 'set' : 'MISSING'));
+        $out('Config     ' . (is_file(BASE_PATH . '/config.php') ? 'config.php' : 'config.php MISSING (copy config.sample.php)'));
+        $out('Key        ' . (strlen((string) config('app.key')) >= 16 ? 'set' : 'MISSING (php bin/console key:generate)'));
         try {
             $out('Database   ' . DB::value('SELECT VERSION()'));
             $pending = Migrator::pending();

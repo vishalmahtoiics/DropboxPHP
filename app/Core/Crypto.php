@@ -8,8 +8,8 @@ use RuntimeException;
 
 /**
  * Symmetric encryption (libsodium XChaCha20-Poly1305, authenticated) and keyed
- * hashing, both derived from APP_KEY with domain separation so one key never
- * does two jobs.
+ * hashing, both derived from the app key in config.php with domain separation
+ * so one key never does two jobs.
  */
 final class Crypto
 {
@@ -23,7 +23,7 @@ final class Crypto
         }
         if (strlen($raw) < 16) {
             if (config('app.env') === 'production') {
-                throw new RuntimeException('APP_KEY is missing or too short. Run: php bin/console key:generate');
+                throw new RuntimeException('The encryption key (app.key in config.php) is missing or too short. Run: php bin/console key:generate');
             }
             $raw = 'insecure-development-key-change-me';
         }

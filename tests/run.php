@@ -8,8 +8,8 @@ declare(strict_types=1);
  *   php tests/run.php            unit + integration
  *   php tests/run.php unit       unit tests only (no database needed)
  *
- * Integration tests use the database named by TEST_DB_DATABASE (default
- * "<DB_DATABASE>_test"). It is wiped and migrated at the start of the run —
+ * Integration tests use the database named by 'test_database' in the
+ * 'database' section of config.php (default: "<database>_test"). It is wiped and migrated at the start of the run —
  * never point it at real data.
  */
 
@@ -93,7 +93,7 @@ foreach (glob(__DIR__ . '/unit/*Test.php') ?: [] as $file) {
 }
 
 if ($suite !== 'unit') {
-    $db = (string) env('TEST_DB_DATABASE', config('database.database') . '_test');
+    $db = (string) config('database.test_database', config('database.database') . '_test');
     Config::set('database.database', $db);
     DB::setPdo(null);
     try {
