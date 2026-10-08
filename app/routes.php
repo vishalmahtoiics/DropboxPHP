@@ -62,6 +62,13 @@ return static function (Router $r): void {
     $r->post('/admin/page-categories', [Admin\PageCategoryController::class, 'save']);
     $r->post('/admin/page-categories/{id}/delete', [Admin\PageCategoryController::class, 'destroy']);
 
+    // Cities
+    $r->get('/admin/cities', [Admin\CityController::class, 'index']);
+    $r->post('/admin/cities', [Admin\CityController::class, 'save']);
+    $r->get('/admin/cities/generator', [Admin\CityController::class, 'generator']);
+    $r->post('/admin/cities/generator', [Admin\CityController::class, 'generate']);
+    $r->post('/admin/cities/{id}/delete', [Admin\CityController::class, 'destroy']);
+
     // Products
     $r->get('/admin/products', [Admin\ProductController::class, 'index']);
     $r->get('/admin/products/new', [Admin\ProductController::class, 'create']);

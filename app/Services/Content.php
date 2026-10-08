@@ -32,7 +32,12 @@ final class Content
 
     public static function page(int $countryId, string $slug): ?array
     {
-        return DB::first('SELECT * FROM pages WHERE country_id = ? AND slug = ? AND ' . self::publishedSql(), [$countryId, $slug]);
+        // A city's pages are live only while the city is active.
+        return DB::first(
+            'SELECT p.*, c.name AS city_name, c.no_index AS city_noindex FROM pages p LEFT JOIN cities c ON c.id = p.city_id
+              WHERE p.country_id = ? AND p.slug = ? AND (p.city_id IS NULL OR c.is_active = 1) AND ' . self::publishedSql('p'),
+            [$countryId, $slug]
+        );
     }
 
     /** @return list<array<string,mixed>> */

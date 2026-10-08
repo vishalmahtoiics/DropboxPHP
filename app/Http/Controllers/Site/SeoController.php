@@ -70,7 +70,7 @@ final class SeoController extends Controller
                 continue;
             }
             $cid = (int) $country['id'];
-            foreach (DB::all('SELECT slug, updated_at FROM pages WHERE country_id = ? AND no_index = 0 AND (canonical_url IS NULL OR canonical_url = \'\') AND ' . Content::publishedSql() . ' ORDER BY slug', [$cid]) as $p) {
+            foreach (DB::all('SELECT p.slug, p.updated_at FROM pages p LEFT JOIN cities c ON c.id = p.city_id WHERE p.country_id = ? AND p.no_index = 0 AND (p.canonical_url IS NULL OR p.canonical_url = \'\') AND (p.city_id IS NULL OR (c.is_active = 1 AND c.is_published = 1 AND c.no_index = 0 AND c.exclude_from_sitemap = 0)) AND ' . Content::publishedSql('p') . ' ORDER BY p.slug', [$cid]) as $p) {
                 $add(Countries::href($country, '/' . $p['slug']), $p['updated_at'], $p['slug'] === '' ? 'daily' : 'weekly', $p['slug'] === '' ? '1.0' : '0.7');
             }
             foreach (DB::all(

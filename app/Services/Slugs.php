@@ -47,6 +47,15 @@ final class Slugs
         if (in_array($first, $reserved, true)) {
             throw ValidationException::with('slug', "\"$first\" is reserved by the system. Choose another address.");
         }
+        // A city owns its first segment: only that city's pages may live under it.
+        $pageCity = $ignoreId ? DB::value('SELECT city_id FROM pages WHERE id = ?', [$ignoreId]) : null;
+        $city = DB::first('SELECT id, slug FROM cities WHERE country_id = ? AND slug = ?', [$countryId, $first]);
+        if ($city && (int) $city['id'] !== (int) $pageCity) {
+            throw ValidationException::with('slug', '/' . $first . ' belongs to the city "' . $first . '". Create city pages from Cities.');
+        }
+        if ($pageCity && !$city) {
+            throw ValidationException::with('slug', 'A city page must stay under its city\'s address.');
+        }
         $exists = DB::value('SELECT id FROM pages WHERE country_id = ? AND slug = ? AND id <> ?', [$countryId, $slug, $ignoreId ?? 0]);
         if ($exists) {
             throw ValidationException::with('slug', 'Another page in this market already uses this address.');

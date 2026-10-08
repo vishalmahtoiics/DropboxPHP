@@ -95,7 +95,7 @@ final class PageController extends Controller
                 'description' => $page['seo_description'],
                 'canonical' => $page['canonical_url'] ?: $path,
                 'image' => $og,
-                'noindex' => (int) $page['no_index'] === 1 || $preview,
+                'noindex' => (int) $page['no_index'] === 1 || (int) ($page['city_noindex'] ?? 0) === 1 || $preview,
                 'nofollow' => (int) $page['no_follow'] === 1,
                 'og_title' => $page['og_title'],
                 'og_description' => $page['og_description'],
