@@ -296,3 +296,51 @@ test('opening the builder straight on a sections page shows its sections', funct
     assert_same('block.cta', $cfg['layout']['elements'][0]['children'][0]['type']);
     assert_same('Direct CTA', $cfg['layout']['elements'][0]['children'][0]['settings']['heading']);
 });
+
+test('layouts export to a file and import into the editor and as templates', function () use ($newPage, $heading): void {
+    $id = $newPage('bx-transfer');
+    sign_in_as('content-marketing');
+    dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/save', ['layout' => $heading('Saved words')]));
+
+    $saved = dispatch(fake_request('GET', '/admin/builder/page/' . $id . '/export'));
+    assert_same(200, $saved->status);
+    assert_contains('attachment; filename="builder-bx-transfer.json"', $saved->headers['Content-Disposition'] ?? '');
+    assert_contains('Saved words', $saved->body);
+
+    $current = dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/export', ['layout' => $heading('Unsaved words'), 'part' => 'section']));
+    $data = json_decode($current->body, true);
+    assert_same('section', $data['kind']);
+    assert_contains('Unsaved words', $current->body);
+
+    // Import only reads the file: nothing is saved until the editor saves.
+    $res = json_decode(dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/import', ['file' => $current->body]))->body, true);
+    assert_true($res['ok']);
+    assert_same('Unsaved words', $res['layout']['elements'][0]['children'][0]['settings']['title']);
+    $bad = fake_request('POST', '/admin/builder/page/' . $id . '/import', ['file' => 'nope']);
+    $bad = new App\Core\Request('POST', $bad->path, [], $bad->body, [], $bad->server + ['HTTP_ACCEPT' => 'application/json', 'HTTP_X_REQUESTED_WITH' => 'fetch'], []);
+    $err = dispatch($bad);
+    assert_same(422, $err->status);
+    assert_contains('not valid JSON', $err->body);
+    assert_contains('Saved words', (string) DB::value('SELECT builder_draft FROM pages WHERE id = ?', [$id]));
+
+    sign_in_as('sales');
+    assert_same(403, dispatch(fake_request('GET', '/admin/builder/page/' . $id . '/export'))->status);
+    assert_same(403, dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/import', ['file' => $current->body]))->status);
+
+    // The templates screen turns a file into a new (inactive) template.
+    sign_in_as('admin');
+    $tmp = tempnam(sys_get_temp_dir(), 'bx');
+    file_put_contents($tmp, App\Builder\Transfer::export(Layout::normalize($heading('Imported footer')), 'footer', 'Shared footer'));
+    $req = fake_request('POST', '/admin/builder/templates/import', ['name' => '', 'kind' => '']);
+    $req = new App\Core\Request('POST', $req->path, [], $req->body, ['file' => ['name' => 'footer.json', 'type' => 'application/json', 'tmp_name' => $tmp, 'size' => filesize($tmp), 'error' => UPLOAD_ERR_OK]], $req->server, []);
+    $up = dispatch($req);
+    unlink($tmp);
+    assert_same(303, $up->status);
+    $tpl = DB::first("SELECT * FROM builder_templates WHERE name = 'Shared footer'");
+    assert_same('footer', $tpl['kind']);
+    assert_same(0, (int) $tpl['is_default'], 'an import is never made active by itself');
+    assert_contains('Imported footer', $tpl['layout']);
+    assert_contains('/admin/builder/template/' . $tpl['id'], $up->headers['Location']);
+    $export = dispatch(fake_request('GET', '/admin/builder/template/' . $tpl['id'] . '/export'));
+    assert_same('footer', json_decode($export->body, true)['kind']);
+});

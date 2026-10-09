@@ -177,3 +177,55 @@ test('without the code permission, custom code stays as it was', function (): vo
     assert_same('Allowed edit', $con['children'][1]['settings']['title']);
     assert_same('body{margin:0}', $kept['settings']['custom_css']);
 });
+
+test('layout files round-trip and imports get fresh ids', function (): void {
+    $layout = Layout::normalize(['elements' => [['id' => 'abcd1234', 'type' => 'container', 'children' => [
+        ['id' => 'ef567890', 'type' => 'heading', 'settings' => ['title' => 'Hello {brand}', 'tag' => 'h1']],
+    ]]], 'settings' => ['custom_css' => '.x{color:red}']]);
+    $file = App\Builder\Transfer::export($layout, 'page', 'Home page');
+    $data = json_decode($file, true);
+    assert_same('builder-layout', $data['format']);
+    assert_same('page', $data['kind']);
+    assert_same('home-page.json', App\Builder\Transfer::filename('Home page'));
+    assert_same('layout.json', App\Builder\Transfer::filename('../..'));
+
+    $in = App\Builder\Transfer::parse($file, true);
+    assert_same('page', $in['kind']);
+    assert_same('Home page', $in['name']);
+    assert_same(2, $in['elements']);
+    assert_same('Hello {brand}', $in['layout']['elements'][0]['children'][0]['settings']['title'], 'the brand token stays portable');
+    assert_same('.x{color:red}', $in['layout']['settings']['custom_css']);
+    assert_true($in['layout']['elements'][0]['id'] !== 'abcd1234', 'imported elements never reuse ids from the file');
+
+    // A bare layout or a list of elements works too.
+    assert_same(2, App\Builder\Transfer::parse(json_encode(['elements' => $layout['elements']]), true)['elements']);
+    assert_same(2, App\Builder\Transfer::parse(json_encode($layout['elements']), true)['elements']);
+    assert_same(2, App\Builder\Transfer::parse("\xEF\xBB\xBF" . $file, true)['elements'], 'a byte order mark is ignored');
+});
+
+test('layout files are untrusted: bad files are refused and code needs the permission', function (): void {
+    foreach (['not json', '{"format":"something-else","layout":{"elements":[]}}', '{"hello":1}', '{"elements":[{"type":"nope"}]}', '{"format":"builder-layout","version":99,"layout":{"elements":[]}}'] as $bad) {
+        assert_throws(App\Core\ValidationException::class, fn () => App\Builder\Transfer::parse($bad, true), $bad);
+    }
+    assert_throws(App\Core\ValidationException::class, fn () => App\Builder\Transfer::parse(str_repeat(' ', Layout::MAX_BYTES + 1), true));
+
+    $file = json_encode(['format' => 'builder-layout', 'version' => 1, 'kind' => 'evil', 'name' => "<b>x</b>\nname", 'layout' => ['elements' => [['type' => 'container', 'children' => [
+        ['type' => 'heading', 'settings' => ['title' => 'Kept', 'color' => 'red;}body{display:none', '_custom_css' => 'selector{color:red}']],
+        ['type' => 'html', 'settings' => ['code' => '<script>alert(1)</script>']],
+    ]]], 'settings' => ['custom_css' => 'body{display:none}']]]);
+    $in = App\Builder\Transfer::parse($file, false);
+    assert_same(null, $in['kind'], 'unknown kinds are ignored');
+    assert_true($in['codeRemoved']);
+    $children = $in['layout']['elements'][0]['children'];
+    assert_same(1, count($children), 'the HTML widget is dropped');
+    assert_same('Kept', $children[0]['settings']['title']);
+    assert_true(!isset($children[0]['settings']['color']), 'invalid colours are cleaned');
+    assert_true(!isset($children[0]['settings']['_custom_css']));
+    assert_true(!isset($in['layout']['settings']), 'page CSS is dropped too');
+    assert_not_contains('<', $in['name']);
+
+    $withCode = App\Builder\Transfer::parse($file, true);
+    assert_same(2, count($withCode['layout']['elements'][0]['children']));
+    assert_true(!$withCode['codeRemoved']);
+    assert_throws(App\Core\ValidationException::class, fn () => App\Builder\Transfer::parse('{"elements":[{"type":"container","children":[{"type":"html","settings":{"code":"<b>x</b>"}}]}]}', false), 'nothing left');
+});

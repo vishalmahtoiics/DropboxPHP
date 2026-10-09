@@ -126,6 +126,12 @@ Pages and product pages can be designed visually, in the style of Elementor:
   - Scripts run on the live page with the page's CSP nonce, but never inside the editor.
   - CSS is cleaned so it can't close its `<style>` tag or load outside stylesheets.
   - Staff without the permission can't add or change code. Code that is already in a layout stays exactly as it was when they save.
+- **Import and export (.json files):**
+  - In the builder, the **Import / export** button (folder icon in the top bar) downloads the layout as a `.json` file, unsaved changes included. Right-click a container → **Export as file** downloads just that section.
+  - **Import** in the same dialog reads a `.json` file and puts it at the end of the layout or in place of everything on it. Nothing goes live until you publish, and Undo takes it back.
+  - **Admin → Builder templates → Import a template** turns a file into a new template (page, section, product, header or footer). It never becomes active by itself. Every template row also has a download button.
+  - Files move layouts between pages, products and sites without touching the database. Forms, menus, products and media files are not inside the file: the layout only refers to them (by form, menu location or address), so they must exist on the site the file is imported into.
+  - An imported file is treated like anything else the editor sends: it is cleaned, gets fresh element ids, and loses its custom HTML/CSS when your role cannot add code.
 - **Changing addresses:**
   - The builder's ⚙ **settings** dialog changes the page or product title, its address (URL), SEO title and description, and whether the page shows the header and footer.
   - When a live page's address changes, the old address keeps working with a permanent redirect.

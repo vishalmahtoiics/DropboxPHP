@@ -33,6 +33,7 @@ $i = static fn (string $n, int $s = 18) => Icons::svg($n, 'icon', $s);
             <button type="button" class="bx-tb-btn" data-bx-redo title="Redo (Ctrl+Shift+Z)" disabled><?= $i('redo') ?></button>
             <button type="button" class="bx-tb-btn" data-bx-navigator title="Navigator (structure)"><?= $i('layers') ?></button>
             <button type="button" class="bx-tb-btn" data-bx-history title="Revisions"><?= $i('history') ?></button>
+            <button type="button" class="bx-tb-btn" data-bx-transfer title="Import / export (.json file)"><?= $i('folder-sync') ?></button>
             <?php if ($config['urls']['preview']): ?><a class="bx-tb-btn" href="<?= e($config['urls']['preview']) ?>" target="_blank" rel="noopener" data-bx-preview title="Preview the saved draft in a new tab"><?= $i('eye') ?></a><?php endif; ?>
             <button type="button" class="btn btn-secondary btn-sm" data-bx-save title="Save draft (Ctrl+S)"><?= $i('save', 16) ?> Save draft</button>
             <button type="button" class="btn btn-primary btn-sm" data-bx-publish<?= $config['canPublish'] ? '' : ' disabled title="You do not have permission to publish this page"' ?>><?= $i('upload', 16) ?> Publish</button>
@@ -113,6 +114,29 @@ $i = static fn (string $n, int $s = 18) => Icons::svg($n, 'icon', $s);
         </div>
         <div class="dialog-foot"><button class="btn btn-secondary" type="button" data-close-dialog>Cancel</button><button class="btn btn-primary" type="submit">Save template</button></div>
     </form>
+</dialog>
+
+<dialog class="bx-dialog" data-bx-transfer-dialog aria-labelledby="bx-tr-title">
+    <div class="dialog-head"><h2 id="bx-tr-title">Import / export</h2><button class="btn btn-ghost btn-icon" type="button" data-close-dialog aria-label="Close"><?= $i('x') ?></button></div>
+    <div class="dialog-body stack">
+        <section class="stack">
+            <h3 class="bx-dialog-sub">Export</h3>
+            <p class="muted small">Download this layout as a .json file, including changes you have not saved yet. Import it into another page, product or site.</p>
+            <div><button class="btn btn-secondary" type="button" data-bx-export><?= $i('download', 16) ?> Download .json</button></div>
+        </section>
+        <hr class="bx-dialog-rule">
+        <form class="stack" data-bx-import-form>
+            <h3 class="bx-dialog-sub">Import</h3>
+            <label class="field"><span class="label">Layout file (.json)</span><input class="input" type="file" name="file" accept=".json,application/json" required></label>
+            <fieldset class="bx-choices">
+                <legend class="label">Put it</legend>
+                <label><input type="radio" name="mode" value="append" checked> <span>At the end of this layout</span></label>
+                <label><input type="radio" name="mode" value="replace"> <span>Instead of everything on it now</span></label>
+            </fieldset>
+            <p class="muted small">Nothing changes on the live site until you publish. Undo (Ctrl+Z) takes the import back.<?= $config['canCode'] ? '' : ' Custom HTML and CSS in the file are left out: your role cannot add code.' ?></p>
+            <div><button class="btn btn-primary" type="submit"><?= $i('upload', 16) ?> Import</button></div>
+        </form>
+    </div>
 </dialog>
 
 <?= View::partial('admin/partials/media-dialog') ?>
