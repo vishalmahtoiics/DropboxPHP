@@ -188,6 +188,7 @@ return static function (Router $r): void {
     $r->post('/admin/builder/templates', [Admin\BuilderController::class, 'createTemplate']);
     $r->get('/admin/builder/templates.json', [Admin\BuilderController::class, 'templateList']);
     $r->post('/admin/builder/templates/from-selection', [Admin\BuilderController::class, 'saveSelection']);
+    $r->post('/admin/builder/templates/import', [Admin\BuilderController::class, 'importTemplate']);
     $r->get('/admin/builder/templates/{id}/elements', [Admin\BuilderController::class, 'templateElements']);
     $r->post('/admin/builder/templates/{id}', [Admin\BuilderController::class, 'updateTemplate']);
     $r->post('/admin/pages/{id}/builder', [Admin\BuilderController::class, 'enablePage']);
@@ -200,6 +201,9 @@ return static function (Router $r): void {
     $r->post('/admin/builder/{kind}/{id}/discard', [Admin\BuilderController::class, 'discard']);
     $r->post('/admin/builder/{kind}/{id}/settings', [Admin\BuilderController::class, 'settings']);
     $r->get('/admin/builder/{kind}/{id}/revisions', [Admin\BuilderController::class, 'revisions']);
+    $r->get('/admin/builder/{kind}/{id}/export', [Admin\BuilderController::class, 'export']);
+    $r->post('/admin/builder/{kind}/{id}/export', [Admin\BuilderController::class, 'export']);
+    $r->post('/admin/builder/{kind}/{id}/import', [Admin\BuilderController::class, 'import']);
     $r->get('/admin/builder/{kind}/{id}/revisions/{revision}', [Admin\BuilderController::class, 'revision']);
 
     $r->get('/admin/settings', [Admin\SettingsController::class, 'index']);

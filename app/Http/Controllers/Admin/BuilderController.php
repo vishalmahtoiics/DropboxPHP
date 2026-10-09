@@ -8,6 +8,7 @@ use App\Builder\Elements;
 use App\Builder\Layout;
 use App\Builder\Renderer;
 use App\Builder\Store;
+use App\Builder\Transfer;
 use App\Cms\Icons;
 use App\Core\Audit;
 use App\Core\Auth;
@@ -70,6 +71,8 @@ final class BuilderController extends AdminController
                 'revisions' => $base . '/revisions',
                 'templates' => '/admin/builder/templates.json',
                 'saveTemplate' => '/admin/builder/templates/from-selection',
+                'export' => $base . '/export',
+                'import' => $base . '/import',
                 'settings' => $base . '/settings',
                 'back' => $this->backUrl($kind, $owner),
                 'preview' => $this->previewUrl($kind, $owner),
@@ -158,6 +161,90 @@ final class BuilderController extends AdminController
             throw HttpException::notFound();
         }
         return $this->json(['ok' => true, 'layout' => $layout]);
+    }
+
+    // --- import / export ------------------------------------------------------------------
+
+    /**
+     * Download the layout as a .json file: what is in the editor (POST, unsaved
+     * changes included) or the saved version (GET: the draft, else the live one).
+     */
+    public function export(string $kind, string $id): Response
+    {
+        $owner = $this->owner($kind, $id);
+        if ($this->request->isPost()) {
+            $layout = Layout::normalize($this->layoutInput());
+        } else {
+            $layouts = Store::layouts($kind, $owner);
+            $layout = $layouts['draft'] ?? $layouts['live'];
+            if ($kind === 'page' && Layout::isEmpty($layout) && $owner['editor'] !== 'builder') {
+                $layout = Layout::fromSections(Content::sections((int) $owner['id'], true));
+            }
+        }
+        $name = Store::title($kind, $owner);
+        $fileKind = $kind === 'template' ? (string) $owner['kind'] : $kind;
+        if ($this->request->isPost() && ($this->request->body['part'] ?? null) === 'section') {
+            // One container from the editor's right-click menu.
+            $name .= ' - section';
+            $fileKind = 'section';
+        }
+        return Response::text(Transfer::export($layout, $fileKind, $name), 200, 'application/json')
+            ->header('Content-Disposition', 'attachment; filename="' . Transfer::filename($name) . '"')
+            ->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * Read an uploaded layout file for the editor. Nothing is saved: the editor
+     * puts the elements on the canvas and the user saves or publishes as usual.
+     */
+    public function import(string $kind, string $id): Response
+    {
+        $this->owner($kind, $id);
+        $in = Transfer::parse($this->uploadedLayout(), Auth::can('builder.code'));
+        return $this->json(['ok' => true, 'layout' => $in['layout'], 'name' => $in['name'], 'kind' => $in['kind'], 'elements' => $in['elements'], 'codeRemoved' => $in['codeRemoved']]);
+    }
+
+    /** The text of the uploaded layout file (a "file" upload, or a "file" field holding the JSON). */
+    private function uploadedLayout(): string
+    {
+        $upload = $this->request->file('file');
+        if ($upload !== null) {
+            if ((int) $upload['error'] === UPLOAD_ERR_INI_SIZE || (int) $upload['error'] === UPLOAD_ERR_FORM_SIZE || (int) $upload['size'] > Layout::MAX_BYTES) {
+                throw ValidationException::with('file', 'The file is too large (at most 1.9 MB).');
+            }
+            if ((int) $upload['error'] === UPLOAD_ERR_OK) {
+                return (string) file_get_contents((string) $upload['tmp_name'], false, null, 0, Layout::MAX_BYTES + 1);
+            }
+        }
+        $text = $this->request->body['file'] ?? null;
+        if (!is_string($text) || trim($text) === '') {
+            throw ValidationException::with('file', 'Choose a layout file (.json) to import.');
+        }
+        return $text;
+    }
+
+    /** A layout file uploaded on the templates screen becomes a new template. */
+    public function importTemplate(): Response
+    {
+        $this->authorizeAny(['pages.edit', 'products.edit', 'navigation.manage']);
+        $in = Transfer::parse($this->uploadedLayout(), Auth::can('builder.code'));
+        $upload = $this->request->file('file') ?? ['name' => ''];
+        $kind = $this->request->str('kind');
+        $kind = in_array($kind, Transfer::KINDS, true) ? $kind : ($in['kind'] ?? 'section');
+        $this->authorize(match ($kind) { 'product' => 'products.edit', 'header', 'footer' => 'navigation.manage', default => 'pages.edit' });
+        $name = $this->request->str('name');
+        if ($name === '') {
+            $name = $in['name'] !== '' ? $in['name'] : pathinfo((string) $upload['name'], PATHINFO_FILENAME);
+        }
+        $name = mb_substr(Sanitizer::line($name, 160), 0, 160) ?: 'Imported layout';
+        // Like a new template, an import is never made active by itself.
+        $id = DB::insert('builder_templates', [
+            'name' => $name, 'kind' => $kind, 'layout' => Layout::encode($in['layout']),
+            'created_by_id' => $this->me['id'], 'updated_by_id' => $this->me['id'],
+        ]);
+        Audit::record('created', 'Template', $id, 'Imported builder template "' . $name . '"');
+        $this->flash('Imported "' . $name . '" (' . $in['elements'] . ' elements).' . ($in['codeRemoved'] ? ' Custom HTML and CSS were left out: your role cannot add code.' : ''));
+        return $this->redirect('/admin/builder/template/' . $id);
     }
 
     /**

@@ -867,6 +867,7 @@
       f.parent ? item('Select parent container', 'arrow-up-right', () => select(f.parent.id, { scroll: true })) : '',
       isContainer ? item('Add a container after', 'plus', () => openStructure({ parent: f.parent ? f.parent.id : null, index: f.index + 1 })) : '',
       isContainer ? item('Save as template', 'folder', () => openSaveTemplate(id)) : '',
+      isContainer ? item('Export as file', 'download', () => exportSection(id)) : '',
       item('Navigator', 'layers', () => toggleNavigator(true)),
       item('Delete', 'trash', () => remove(id), 'is-danger'));
     showMenu(x, y);
@@ -1019,6 +1020,73 @@
     } catch (e) { toast(e.message, 'error'); }
   });
   $$('dialog [data-close-dialog]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
+
+  // --- import / export ------------------------------------------------------------------------
+  const transferDialog = $('[data-bx-transfer-dialog]');
+  async function exportLayout(layout, part) {
+    try {
+      const res = await fetch(cfg.urls.export, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf(), 'X-Requested-With': 'fetch' },
+        body: JSON.stringify({ layout, part: part || null }),
+      });
+      if (!res.ok) throw new Error('Export failed (' + res.status + ')');
+      const name = ((res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/) || [])[1] || 'layout.json';
+      const url = URL.createObjectURL(await res.blob());
+      const a = h('a', { href: url, download: name });
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('Downloaded ' + name + '.');
+    } catch (e) { toast(e.message, 'error'); }
+  }
+  function exportSection(id) {
+    const f = locate(id);
+    if (f) exportLayout({ version: 1, elements: [f.el] }, 'section');
+  }
+  $('[data-bx-transfer]').addEventListener('click', () => { $('[data-bx-import-form]').reset(); transferDialog.showModal(); });
+  $('[data-bx-export]').addEventListener('click', () => exportLayout(doc));
+  $('[data-bx-import-form]').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const file = form.file.files[0];
+    if (!file) return;
+    if (file.size > 1900000) { toast('The file is too large (at most 1.9 MB).', 'error'); return; }
+    const replace = form.mode.value === 'replace';
+    if (replace && doc.elements.length && !window.confirm('Replace everything in this layout with the file? (Undo brings it back.)')) return;
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const resp = await fetch(cfg.urls.import, { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-Token': csrf(), 'X-Requested-With': 'fetch' }, body });
+      let res = null;
+      try { res = await resp.json(); } catch (x) { /* not JSON */ }
+      if (!resp.ok || !res || res.ok === false) {
+        if (resp.status === 419) throw new Error('Your session expired. Reload the page (your last saved draft is kept).');
+        const fieldError = res && res.errors && Object.values(res.errors)[0];
+        throw new Error((res && res.error) || (Array.isArray(fieldError) ? fieldError[0] : fieldError) || 'Import failed (' + resp.status + ')');
+      }
+      const incoming = docFrom(res.layout);
+      const css = (incoming.settings && incoming.settings.custom_css) || '';
+      change(() => {
+        if (replace) {
+          doc = incoming;
+        } else {
+          doc.elements.push(...incoming.elements);
+          if (css) {
+            const mine = (doc.settings && doc.settings.custom_css) || '';
+            doc.settings = Object.assign({}, doc.settings || {}, { custom_css: mine ? mine + '\n\n' + css : css });
+          }
+        }
+      });
+      transferDialog.close();
+      select(incoming.elements[0] ? incoming.elements[0].id : null, { scroll: true });
+      const wrongKind = res.kind && ((cfg.productContext && ['header', 'footer'].includes(res.kind)) || (!cfg.productContext && res.kind === 'product'));
+      toast('Imported ' + res.elements + ' elements' + (res.name ? ' from "' + res.name + '"' : '') + '. Save the draft or publish to keep them.'
+        + (res.codeRemoved ? ' Custom HTML and CSS were left out.' : '')
+        + (wrongKind ? ' Note: the file was made for a ' + res.kind + ', so some widgets may show nothing here.' : ''));
+    } catch (err) { toast(err.message, 'error'); }
+  });
 
   // --- saving -------------------------------------------------------------------------------------
   function setDirty(v) { dirty = v; updateStatus(); }
