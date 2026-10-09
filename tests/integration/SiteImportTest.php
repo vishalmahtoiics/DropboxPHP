@@ -155,6 +155,39 @@ test('"Replace everything" overwrites existing pages, forms, header and menus an
     DB::query("UPDATE builder_templates SET is_default = 0 WHERE id = ?", [$tplId]);
 });
 
+test('images keep their folder and name, re-imports reuse them, and old image addresses redirect', function () use ($package, $upload, $png, $layout): void {
+    $make = static fn () => $package([
+        'format' => 'site-package', 'version' => 1, 'name' => 'keep.example',
+        'pages' => [['file' => 'pages/p.json', 'title' => 'Keep', 'slug' => 'keep-page']],
+        'media_sources' => ['media/2019/04/Keep-Logo.png' => ['/wp-content/uploads/2019/04/Keep-Logo.png', '/wp-content/uploads/2019/04/Keep-Logo-300x100.png', 'not-a-path']],
+    ], [
+        'pages/p.json' => $layout([['type' => 'container', 'children' => [['type' => 'image', 'settings' => ['src' => 'pkg:media/2019/04/Keep-Logo.png', 'alt' => 'Logo']]]]]),
+        'media/2019/04/Keep-Logo.png' => $png,
+    ]);
+    // A file left by an earlier run of the suite would take the address.
+    $left = App\Services\Storage::localPath('2019/04/keep-logo.png');
+    if ($left !== null) {
+        unlink($left);
+    }
+    sign_in_as('admin');
+    $zip = $make();
+    $res = $upload($zip, ['replace' => '1', 'redirects' => '1']);
+    assert_same(200, $res->status, substr($res->body, 0, 300));
+    $url = (string) DB::value("SELECT url FROM media WHERE storage_key = '2019/04/keep-logo.png'");
+    assert_true(str_ends_with($url, '/2019/04/keep-logo.png'), 'the image keeps its folder and name: ' . $url);
+    assert_contains($url, $res->body, 'the report lists the new image address');
+    assert_same($url, DB::value('SELECT destination FROM redirects WHERE source = ?', ['/wp-content/uploads/2019/04/keep-logo.png']));
+    assert_same($url, DB::value('SELECT destination FROM redirects WHERE source = ?', ['/wp-content/uploads/2019/04/keep-logo-300x100.png']), 'resized copies redirect too');
+    $count = (int) DB::value("SELECT COUNT(*) FROM media WHERE filename = 'Keep-Logo.png'");
+
+    $upload($zip, ['replace' => '1', 'redirects' => '1']);
+    unlink($zip);
+    assert_same($count, (int) DB::value("SELECT COUNT(*) FROM media WHERE filename = 'Keep-Logo.png'"), 'importing again reuses the image');
+    assert_contains($url, (string) DB::value("SELECT builder_layout FROM pages WHERE slug = 'keep-page'"));
+    $old = dispatch(fake_request('GET', '/wp-content/uploads/2019/04/Keep-Logo.png'));
+    assert_same(301, $old->status, 'the old address redirects');
+});
+
 test('site import is hidden from the menu, needs a signed-in administrator and a real package', function () use ($package, $upload): void {
     App\Core\Session::useMemory();
     App\Core\Auth::reset();

@@ -43,9 +43,10 @@ final class Uploads
     /**
      * Validate and store an uploaded file, creating its media row.
      * @param array<string,mixed> $file one entry of $_FILES
+     * @param string|null $key a storage key to use when it is free (imports); otherwise a new one
      * @return array<string,mixed> the media row
      */
-    public static function store(array $file, ?int $userId, ?int $folderId = null): array
+    public static function store(array $file, ?int $userId, ?int $folderId = null, ?string $key = null): array
     {
         $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
         if ($error !== UPLOAD_ERR_OK) {
@@ -87,7 +88,11 @@ final class Uploads
         } elseif ($ext === 'svg') {
             [$width, $height] = self::svgSize((string) file_get_contents($tmp));
         }
-        $key = Storage::newKey($name, $ext);
+        $free = $key !== null && preg_match(Storage::KEY_PATTERN, $key) && strtolower(pathinfo($key, PATHINFO_EXTENSION)) === $ext
+            && !DB::value('SELECT id FROM media WHERE storage_key = ?', [$key]) && Storage::localPath($key) === null;
+        if (!$free) {
+            $key = Storage::newKey($name, $ext);
+        }
         [$provider, $url] = Storage::put($tmp, $key, $mime);
         $id = DB::insert('media', [
             'folder_id' => $folderId,
