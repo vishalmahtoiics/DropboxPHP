@@ -119,7 +119,9 @@ final class Style
         }
         $width = $s['_width'] ?? '';
         if ($width === 'full') {
-            $add('desktop', $w, 'width:100%;flex:0 0 100%;max-width:100%');
+            // flex-basis auto + width 100%: full width in a row, natural height in a column
+            // (a 100% basis would mean 100% of the height there).
+            $add('desktop', $w, 'width:100%;flex:0 0 auto;max-width:100%;align-self:stretch');
         } elseif ($width === 'inline') {
             $add('desktop', $w, 'width:auto;flex:0 0 auto');
         } elseif ($width === 'custom') {
