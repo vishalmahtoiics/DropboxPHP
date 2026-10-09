@@ -474,6 +474,23 @@ a.bx-con { color: inherit; text-decoration: none; }
 .bx-image { margin: 0; }
 .bx-image img { display: inline-block; vertical-align: middle; border-radius: inherit; }
 .bx-image figcaption { color: var(--muted); font-size: .875rem; margin-top: .5rem; }
+/* Image slider: slides share one grid cell and fade; site.js moves them */
+.bx-slider { position: relative; overflow: hidden; }
+.bx-slides { display: grid; }
+.bx-slide { grid-area: 1 / 1; opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility .6s; }
+.bx-slide.is-active { opacity: 1; visibility: visible; }
+.bx-slide img { display: block; width: 100%; height: auto; object-fit: cover; }
+.bx-slide a { display: block; }
+.bx-slider-nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .28); color: #fff; cursor: pointer; transition: background .2s; }
+.bx-slider-nav:hover, .bx-slider-nav:focus-visible { background: rgba(0, 0, 0, .55); }
+.bx-slider-nav.is-prev { left: 12px; } .bx-slider-nav.is-next { right: 12px; }
+.bx-slider-dots { position: absolute; left: 0; right: 0; bottom: 12px; z-index: 2; display: flex; justify-content: center; gap: 8px; color: #fff; }
+.bx-slider-dots button { width: 10px; height: 10px; padding: 0; border: 2px solid currentColor; border-radius: 50%; background: transparent; opacity: .8; cursor: pointer; }
+.bx-slider-dots button[aria-current="true"] { background: currentColor; opacity: 1; }
+.bx-slider.is-editor .bx-slides { display: flex; flex-direction: column; gap: 8px; }
+.bx-slider.is-editor .bx-slide { opacity: 1; visibility: visible; }
+@media (max-width: 767px) { .bx-slider-nav { width: 34px; height: 34px; } .bx-slider-nav .icon { width: 20px; height: 20px; } }
+@media (prefers-reduced-motion: reduce) { .bx-slide { transition: none; } }
 .bx-btn-wrap { display: grid; grid-auto-flow: column; justify-content: start; }
 .btn-white { background: #fff; color: var(--brand); }
 .btn-white:hover { background: #f1f5ff; }
