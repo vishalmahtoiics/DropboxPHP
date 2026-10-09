@@ -39,6 +39,13 @@
   document.addEventListener('click', (e) => {
     const navBtn = e.target.closest('[data-toggle-nav]');
     if (navBtn) { document.body.classList.toggle('nav-open'); return; }
+    // The sidebar's own button: closes the drawer on phones, collapses the menu to icons on wider screens.
+    if (e.target.closest('[data-collapse-nav]')) {
+      if (matchMedia('(max-width: 900px)').matches) { document.body.classList.remove('nav-open'); return; }
+      const collapsed = document.documentElement.classList.toggle('nav-collapsed');
+      try { localStorage.setItem('admin-nav', collapsed ? 'collapsed' : 'open'); } catch (err) { /* ignore */ }
+      return;
+    }
     if (document.body.classList.contains('nav-open') && !e.target.closest('.sidebar')) document.body.classList.remove('nav-open');
 
     const dd = e.target.closest('[data-dropdown-toggle]');
@@ -496,5 +503,14 @@
     form.addEventListener('input', () => { dirty = true; });
     form.addEventListener('submit', () => { dirty = false; });
     window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+  });
+
+  // --- every data table scrolls sideways on small screens instead of squeezing its columns -------
+  $$('table.table').forEach((table) => {
+    if (table.closest('.table-wrap')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    table.parentNode.insertBefore(wrap, table);
+    wrap.appendChild(table);
   });
 })();

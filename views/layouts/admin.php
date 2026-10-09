@@ -19,21 +19,24 @@ $initials = strtoupper(mb_substr($me['name'] ?? '?', 0, 1) . mb_substr(strstr(($
     <title><?= e(($title ?? 'Admin') . ' · ' . $site['site_name']) ?></title>
     <?php if ($site['favicon_url']): ?><link rel="icon" href="<?= e($site['favicon_url']) ?>"><?php endif; ?>
     <link rel="stylesheet" href="<?= e(asset('css/admin.css')) ?>">
-    <script nonce="<?= e(nonce()) ?>">try{var t=localStorage.getItem('admin-theme');if(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.dataset.theme='dark'}catch(e){}</script>
+    <script nonce="<?= e(nonce()) ?>">try{var t=localStorage.getItem('admin-theme');if(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.dataset.theme='dark';if(localStorage.getItem('admin-nav')==='collapsed')document.documentElement.classList.add('nav-collapsed')}catch(e){}</script>
 </head>
 <body>
 <div class="shell">
     <aside class="sidebar" id="sidebar" aria-label="Admin navigation">
-        <a class="sidebar-brand" href="/admin">
-            <?= App\Services\Brand::mark('brand-mark') ?>
-            <span class="truncate"><?= e($site['site_name']) ?></span>
-        </a>
+        <div class="sidebar-head">
+            <a class="sidebar-brand" href="/admin" title="<?= e($site['site_name']) ?>">
+                <?= App\Services\Brand::mark('brand-mark') ?>
+                <span class="truncate"><?= e($site['site_name']) ?></span>
+            </a>
+            <button class="btn btn-ghost btn-icon sidebar-toggle" type="button" data-collapse-nav aria-label="Collapse menu" aria-controls="sidebar" title="Collapse or expand the menu"><?= Icons::svg('menu', 'icon', 20) ?></button>
+        </div>
         <nav>
             <?php foreach (AdminNav::visible() as $group): ?>
                 <div class="nav-group">
                     <div class="nav-group-title"><?= e($group['title']) ?></div>
                     <?php foreach ($group['items'] as $item): ?>
-                        <a class="nav-link<?= AdminNav::isActive($item['href'], $path) ? ' active' : '' ?>" href="<?= e($item['href']) ?>">
+                        <a class="nav-link<?= AdminNav::isActive($item['href'], $path) ? ' active' : '' ?>" href="<?= e($item['href']) ?>" title="<?= e($item['label']) ?>">
                             <?= Icons::svg($item['icon'], 'icon', 18) ?><span><?= e($item['label']) ?></span>
                         </a>
                     <?php endforeach; ?>
@@ -43,7 +46,7 @@ $initials = strtoupper(mb_substr($me['name'] ?? '?', 0, 1) . mb_substr(strstr(($
     </aside>
     <div class="main">
         <header class="topbar">
-            <button class="btn btn-ghost btn-icon menu-toggle" type="button" data-toggle-nav aria-label="Open menu"><?= Icons::svg('menu') ?></button>
+            <button class="btn btn-ghost btn-icon menu-toggle" type="button" data-toggle-nav aria-label="Open menu" aria-controls="sidebar"><?= Icons::svg('menu') ?></button>
             <form class="topbar-search" action="/admin/search" method="get" role="search">
                 <?= Icons::svg('search', 'icon', 16) ?>
                 <input class="input" type="search" name="q" placeholder="Search pages, products, leads…" aria-label="Search admin" value="<?= e($_GET['q'] ?? '') ?>">

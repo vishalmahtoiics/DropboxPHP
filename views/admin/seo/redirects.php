@@ -11,13 +11,13 @@ $e = $edit ?? [];
             <?php if (!$rows): ?><div class="empty"><p>No redirects yet.</p></div><?php else: ?>
             <?= Form::bulkBar('bulk-redirects', '/admin/redirects/bulk', ['activate' => 'Switch on', 'deactivate' => 'Switch off', 'delete' => 'Delete'], 'redirects') ?>
             <div class="table-wrap"><table class="table"><thead><tr><th class="check"><?= Form::bulkAll('bulk-redirects') ?></th><th>From</th><th>To</th><th>Type</th><th>Hits</th><th></th></tr></thead><tbody>
-                <?php foreach ($rows as $r): ?><tr<?= (int) $r['is_active'] ? '' : ' style="opacity:.55"' ?>><td class="check"><?= Form::bulkCheck('bulk-redirects', (int) $r['id'], $r['source']) ?></td><td><code><?= e($r['source']) ?></code><?php if ($r['origin'] === 'AUTOMATIC'): ?> <span class="badge">auto</span><?php endif; ?></td><td class="small" style="word-break:break-all"><?= e($r['destination']) ?></td><td><?= $r['type'] === 'PERMANENT' ? '301' : '302' ?></td><td><?= (int) $r['hit_count'] ?></td>
+                <?php foreach ($rows as $r): ?><tr<?= (int) $r['is_active'] ? '' : ' style="opacity:.55"' ?>><td class="check"><?= Form::bulkCheck('bulk-redirects', (int) $r['id'], $r['source']) ?></td><td class="path"><code><?= e($r['source']) ?></code><?php if ($r['origin'] === 'AUTOMATIC'): ?> <span class="badge">auto</span><?php endif; ?></td><td class="small path"><?= e($r['destination']) ?></td><td><?= $r['type'] === 'PERMANENT' ? '301' : '302' ?></td><td><?= (int) $r['hit_count'] ?></td>
                     <td class="actions"><a class="btn btn-ghost btn-sm" href="?edit=<?= (int) $r['id'] ?>">Edit</a><?= Form::action('/admin/redirects/' . $r['id'] . '/delete', 'Delete', 'btn btn-danger-ghost btn-sm', 'Delete this redirect?') ?></td></tr><?php endforeach; ?>
             </tbody></table></div><?php endif; ?>
         </div>
         <?php if ($notFound): ?>
         <div class="card"><div class="card-head"><h2>Recent 404s</h2></div><div class="table-wrap"><table class="table"><tbody>
-            <?php foreach ($notFound as $n): ?><tr><td><code><?= e($n['path']) ?></code></td><td><?= (int) $n['hits'] ?> hits</td><td class="actions"><a class="btn btn-secondary btn-sm" href="?from=<?= e(rawurlencode($n['path'])) ?>">Redirect</a>
+            <?php foreach ($notFound as $n): ?><tr><td class="path"><code><?= e($n['path']) ?></code></td><td><?= (int) $n['hits'] ?> hits</td><td class="actions"><a class="btn btn-secondary btn-sm" href="?from=<?= e(rawurlencode($n['path'])) ?>">Redirect</a>
                 <form class="inline-form" method="post" action="/admin/redirects"><?= csrf_field() ?><input type="hidden" name="action" value="ignore"><input type="hidden" name="path" value="<?= e($n['path']) ?>"><button class="btn btn-ghost btn-sm" type="submit">Ignore</button></form></td></tr><?php endforeach; ?>
         </tbody></table></div></div>
         <?php endif; ?>

@@ -11,7 +11,7 @@ foreach (Permissions::ALL as $key => [$group, $label]) {
 $locked = $e && ((int) $e['rank'] <= (int) $me['role_rank'] || $e['slug'] === 'super-admin');
 ?>
 <?= App\Core\View::partial('admin/partials/page-head', ['heading' => 'Roles & permissions', 'crumbs' => [['Staff', '/admin/staff'], ['Roles', null]], 'sub' => 'Lower rank = more privileged. You can manage roles ranked below yours (' . (int) $me['role_rank'] . ').', 'actions' => '<a class="btn btn-primary" href="?new=1">' . Icons::svg('plus', 'icon', 16) . ' New role</a>']) ?>
-<div class="builder" style="grid-template-columns:320px minmax(0,1fr)">
+<div class="builder builder-aside">
     <div class="card"><div class="card-body">
         <?php foreach ($roles as $r): ?>
             <a class="nav-link<?= (int) ($e['id'] ?? 0) === (int) $r['id'] ? ' active' : '' ?>" href="?edit=<?= (int) $r['id'] ?>"><?= Icons::svg('shield', 'icon', 16) ?> <span class="grow"><?= e($r['name']) ?></span> <span class="badge"><?= (int) $r['users'] ?></span></a>
