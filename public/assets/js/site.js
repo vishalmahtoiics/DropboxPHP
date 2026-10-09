@@ -283,6 +283,55 @@
     });
   });
 
+  // --- builder image slider -------------------------------------------------------------
+  $$('[data-bx-slider]').forEach((slider) => {
+    const slides = $$('.bx-slide', slider);
+    const dots = $$('[data-bx-dot]', slider);
+    if (slides.length < 2) return;
+    let index = 0;
+    let timer = null;
+    const go = (to) => {
+      index = (to + slides.length) % slides.length;
+      slides.forEach((sl, i) => {
+        const on = i === index;
+        sl.classList.toggle('is-active', on);
+        sl.setAttribute('aria-hidden', String(!on));
+        $$('a', sl).forEach((a) => { a.tabIndex = on ? 0 : -1; });
+      });
+      dots.forEach((d, i) => { if (i === index) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
+    };
+    const interval = parseInt(slider.dataset.interval, 10) || 0;
+    const stop = () => { clearInterval(timer); timer = null; };
+    const start = () => {
+      stop();
+      if (interval > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) timer = setInterval(() => go(index + 1), interval);
+    };
+    const prev = $('[data-bx-prev]', slider);
+    const next = $('[data-bx-next]', slider);
+    if (prev) prev.addEventListener('click', () => { go(index - 1); start(); });
+    if (next) next.addEventListener('click', () => { go(index + 1); start(); });
+    dots.forEach((d) => d.addEventListener('click', () => { go(parseInt(d.dataset.bxDot, 10) || 0); start(); }));
+    slider.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') { go(index - 1); start(); }
+      if (e.key === 'ArrowRight') { go(index + 1); start(); }
+    });
+    // Pause while the visitor points at or tabs into the slider, or the tab is hidden.
+    slider.addEventListener('mouseenter', stop);
+    slider.addEventListener('mouseleave', start);
+    slider.addEventListener('focusin', stop);
+    slider.addEventListener('focusout', (e) => { if (!slider.contains(e.relatedTarget)) start(); });
+    document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+    let x0 = null;
+    slider.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    slider.addEventListener('touchend', (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      if (Math.abs(dx) > 40) { go(index + (dx < 0 ? 1 : -1)); start(); }
+      x0 = null;
+    }, { passive: true });
+    start();
+  });
+
   // --- builder menu widget: menu button on small screens ------------------------------
   $$('[data-bx-nav]').forEach((nav) => {
     const btn = $('[data-bx-nav-toggle]', nav);

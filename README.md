@@ -90,7 +90,7 @@ Pages and product pages can be designed visually, in the style of Elementor:
 - Containers nest inside each other to make columns. The structure picker sets up 2, 3 or 4 columns, or uneven splits, in one click.
 - **Widgets** (over 60):
   - **Basic:** heading, text editor, image, button, icon, icon box, image box, icon list, spacer, divider, video.
-  - **General:** counter, testimonial, accordion/FAQ (with FAQ structured data), tabs, social icons, notice.
+  - **General:** image slider (autoplay, arrows, dots, swipe; slides without an image are skipped), counter, testimonial, accordion/FAQ (with FAQ structured data), tabs, social icons, notice.
   - **Site:** form, breadcrumbs, site logo, menu, country switcher, copyright, contact info.
   - **Code:** custom HTML (permission-gated).
   - **Product (product pages and templates):** title, price with the monthly/annual switch, image, gallery, short description, description, features, benefits, specifications, button, enquiry form, related products, breadcrumbs.

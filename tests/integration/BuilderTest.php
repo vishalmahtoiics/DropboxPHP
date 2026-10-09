@@ -344,3 +344,36 @@ test('layouts export to a file and import into the editor and as templates', fun
     $export = dispatch(fake_request('GET', '/admin/builder/template/' . $tpl['id'] . '/export'));
     assert_same('footer', json_decode($export->body, true)['kind']);
 });
+
+test('the image slider shows one slide at a time on the site and every slide in the editor', function () use ($newPage): void {
+    $id = $newPage('bx-slider');
+    sign_in_as('content-marketing');
+    $layout = ['elements' => [['type' => 'container', 'children' => [['type' => 'slider', 'settings' => ['slides' => [
+        ['image' => '/media/one.png', 'alt' => 'First banner', 'link' => '/first'],
+        ['image' => '', 'alt' => 'Not chosen yet', 'link' => ''],
+        ['image' => '/media/two.png', 'alt' => 'Second banner', 'link' => ''],
+    ], 'interval' => 7]]]]]];
+
+    $editor = json_decode(dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/render', ['layout' => $layout]))->body, true)['html'];
+    assert_contains('bx-slider is-editor', $editor);
+    assert_contains('Slide 2 — choose an image', $editor, 'an empty slide is a placeholder in the editor');
+    assert_not_contains('data-bx-slider', $editor, 'slides never move inside the editor');
+
+    dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/save', ['layout' => $layout, 'publish' => 1]));
+    $live = dispatch(fake_request('GET', '/bx-slider'))->body;
+    assert_contains('data-bx-slider data-interval="7000"', $live);
+    assert_not_contains('Not chosen yet', $live, 'a slide without an image is left out');
+    assert_same(2, substr_count($live, 'aria-roledescription="slide"'));
+    assert_contains('aria-label="1 of 2"', $live);
+    assert_contains('<a href="/first">', $live);
+    assert_contains('fetchpriority="high"', $live, 'the first slide is not lazy-loaded');
+    assert_same(2, substr_count($live, 'data-bx-dot='));
+    assert_contains('data-bx-next', $live);
+
+    // A single slide is a plain image: no arrows, dots or timer.
+    $layout['elements'][0]['children'][0]['settings']['slides'] = [['image' => '/media/one.png', 'alt' => 'Only', 'link' => '']];
+    dispatch(fake_request('POST', '/admin/builder/page/' . $id . '/save', ['layout' => $layout, 'publish' => 1]));
+    $single = dispatch(fake_request('GET', '/bx-slider'))->body;
+    assert_not_contains('data-bx-slider', $single);
+    assert_not_contains('data-bx-next', $single);
+});

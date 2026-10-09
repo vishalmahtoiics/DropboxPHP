@@ -357,6 +357,35 @@ final class Elements
                     ]]],
                 ],
             ],
+            'slider' => [
+                'label' => 'Image slider', 'icon' => 'layers', 'category' => 'general', 'keywords' => 'carousel slideshow banner hero images gallery',
+                'tabs' => [
+                    'content' => [
+                        ['label' => 'Slides', 'controls' => [
+                            C::c('repeater', 'slides', 'Slides', [
+                                ['image' => '', 'alt' => 'Slide 1', 'link' => ''],
+                                ['image' => '', 'alt' => 'Slide 2', 'link' => ''],
+                            ], ['limit' => 12, 'titleField' => 'alt', 'fields' => [
+                                C::c('image', 'image', 'Image', ''),
+                                C::c('text', 'alt', 'Alt text', 'Slide', ['max' => 200, 'help' => 'Describe the image for screen readers and search engines.']),
+                                C::c('url', 'link', 'Link (optional)', '', ['help' => 'The whole slide becomes clickable.']),
+                            ]]),
+                        ]],
+                        ['label' => 'Behaviour', 'controls' => [
+                            C::c('switch', 'autoplay', 'Change slides automatically', true),
+                            C::c('number', 'interval', 'Seconds per slide', 5, ['min' => 2, 'max' => 30, 'showWhen' => ['autoplay' => [true]]]),
+                            C::c('switch', 'arrows', 'Show arrows', true),
+                            C::c('switch', 'dots', 'Show dots', true),
+                        ]],
+                    ],
+                    'style' => [['label' => 'Slider', 'controls' => [
+                        $size('height', 'Height (blank = the image\'s own)', '{{W}} .bx-slide img', 'height', 'px', 1200),
+                        C::c('select', 'fit', 'Image fit', 'cover', ['choices' => ['cover' => 'Fill (crop the edges)', 'contain' => 'Fit (whole image)'], 'css' => ['{{W}} .bx-slide img' => 'object-fit:{{V}}']]),
+                        C::c('color', 'nav_color', 'Arrow and dot colour', '', ['css' => ['{{W}} .bx-slider-nav' => 'color:{{V}}', '{{W}} .bx-slider-dots button' => 'color:{{V}}']]),
+                        C::c('dimensions', 'radius', 'Corner radius', C::dims(), ['units' => ['px', '%'], 'dims' => ['{{W}} .bx-slider', 'border-radius']]),
+                    ]]],
+                ],
+            ],
             'counter' => [
                 'label' => 'Counter', 'icon' => 'trending-up', 'category' => 'general', 'keywords' => 'number stat statistic',
                 'tabs' => [
