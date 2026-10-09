@@ -24,7 +24,7 @@ $link = static fn (array $i, string $extra = '') => '<a href="' . e((string) $i[
 ?>
 <nav class="bx-nav bx-nav-<?= e($s['layout']) ?> bx-collapse-<?= e($s['collapse']) ?>" aria-label="<?= e($s['menu'] === 'HEADER' ? 'Main' : ucfirst(strtolower(str_replace('_', ' ', $s['menu'])))) ?>" data-bx-nav>
     <?php if ($s['collapse'] !== 'none'): ?>
-        <button class="bx-nav-toggle" type="button" aria-expanded="false" aria-controls="<?= e($id) ?>" data-bx-nav-toggle><?= Icons::svg('menu', 'icon', 22) ?><span><?= e($s['toggle_label']) ?></span></button>
+        <button class="bx-nav-toggle" type="button" aria-expanded="false" aria-controls="<?= e($id) ?>" aria-label="<?= e($s['toggle_label'] !== '' ? $s['toggle_label'] : 'Menu') ?>" data-bx-nav-toggle><?= Icons::svg('menu', 'icon', 22) ?><?php if ($s['toggle_label'] !== ''): ?><span><?= e($s['toggle_label']) ?></span><?php endif; ?></button>
     <?php endif; ?>
     <ul class="bx-nav-list" id="<?= e($id) ?>">
         <?php foreach ($items as $item): ?>

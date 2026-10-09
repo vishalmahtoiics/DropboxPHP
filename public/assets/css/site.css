@@ -456,10 +456,10 @@ dialog::backdrop { background: rgb(11 27 52 / .55); backdrop-filter: blur(3px); 
    (the defaults are wrapped in :where() so a single .el-<id> rule beats them).
    ========================================================================= */
 .bx-root { display: block; }
-.bx-con { position: relative; display: block; min-width: 0; }
+.bx-con { position: relative; display: flex; flex-direction: column; min-width: 0; }
 :where(.bx-con.bx-top) { padding: 2.5rem var(--gutter); }
 a.bx-con { color: inherit; text-decoration: none; }
-.bx-inner { display: flex; flex-direction: column; gap: 20px; width: 100%; margin-inline: auto; }
+.bx-inner { display: flex; flex-direction: column; flex: 1 0 auto; gap: 20px; width: 100%; margin-inline: auto; }
 :where(.bx-boxed.bx-top) > .bx-inner { max-width: var(--container); }
 :where(.bx-inner > .bx-child) { flex: 1 1 0%; min-width: 0; }
 :where(.bx-inner > .bx-w) { min-width: 0; max-width: 100%; }
