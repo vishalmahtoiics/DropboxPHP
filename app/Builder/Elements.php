@@ -511,7 +511,33 @@ final class Elements
                         C::c('text', 'cta_location', 'Lead attribution label', 'Builder form', ['max' => 120]),
                         C::c('switch', 'card', 'Show in a card', true),
                     ]]],
-                    'style' => [],
+                    'style' => (static function () use ($size): array {
+                        $field = '{{W}} .lead-form input:not([type=checkbox]):not([type=radio]), {{W}} .lead-form select, {{W}} .lead-form textarea';
+                        $button = '{{W}} .lead-form .form-actions .btn';
+                        return [
+                            ['label' => 'Fields', 'controls' => array_merge([
+                                C::c('slider', 'gap', 'Space between fields', ['size' => '', 'unit' => 'px'], ['responsive' => true, 'units' => ['px', 'rem'], 'min' => 0, 'max' => 80, 'css' => ['{{W}} .lead-form .form-grid' => 'gap:{{V}}']]),
+                                C::c('color', 'field_bg', 'Background', '', ['css' => [$field => 'background:{{V}}']]),
+                                C::c('color', 'field_color', 'Text colour', '', ['css' => [$field => 'color:{{V}}']]),
+                                C::c('color', 'field_border', 'Border colour', '', ['css' => [$field => 'border-color:{{V}}']]),
+                                C::c('slider', 'field_border_width', 'Border width', ['size' => '', 'unit' => 'px'], ['units' => ['px'], 'min' => 0, 'max' => 10, 'css' => [$field => 'border-width:{{V}}']]),
+                                C::c('dimensions', 'field_radius', 'Corner radius', C::dims(), ['units' => ['px', '%', 'rem'], 'dims' => [$field, 'border-radius']]),
+                                C::c('dimensions', 'field_padding', 'Padding', C::dims(), ['responsive' => true, 'units' => ['px', 'em'], 'dims' => [$field, 'padding']]),
+                                C::c('color', 'label_color', 'Label colour', '', ['css' => ['{{W}} .lead-form label, {{W}} .lead-form legend' => 'color:{{V}}']]),
+                            ], C::typography('field_', $field))],
+                            ['label' => 'Button', 'controls' => array_merge([
+                                C::c('choose', 'button_width', 'Width', '', ['choices' => ['' => 'Full width', 'auto' => 'Fit the text'], 'css' => [$button => 'width:{{V}}']]),
+                                C::c('color', 'button_bg', 'Background', '', ['css' => [$button => 'background:{{V}};border-color:{{V}}']]),
+                                C::c('color', 'button_color', 'Text colour', '', ['css' => [$button => 'color:{{V}}']]),
+                                C::c('color', 'button_hover_bg', 'Background on hover', '', ['css' => [$button . ':hover' => 'background:{{V}};border-color:{{V}}']]),
+                                C::c('dimensions', 'button_radius', 'Corner radius', C::dims(), ['units' => ['px', '%', 'rem'], 'dims' => [$button, 'border-radius']]),
+                                C::c('dimensions', 'button_padding', 'Padding', C::dims(), ['responsive' => true, 'units' => ['px', 'em'], 'dims' => [$button, 'padding']]),
+                                C::c('dimensions', 'button_border_width', 'Border width', C::dims(), ['units' => ['px'], 'dims' => [$button, 'border-width']]),
+                            ], C::typography('button_', $button), [
+                                C::c('slider', 'button_space', 'Space above the button', ['size' => '', 'unit' => 'px'], ['units' => ['px', 'rem'], 'min' => 0, 'max' => 80, 'css' => ['{{W}} .lead-form .form-actions' => 'margin-top:{{V}}']]),
+                            ])],
+                        ];
+                    })(),
                 ],
             ],
             'site_logo' => [
