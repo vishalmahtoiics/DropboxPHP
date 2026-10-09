@@ -8,6 +8,7 @@ use App\Services\Settings;
 $site = Settings::group('website');
 $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/admin'), PHP_URL_PATH) ?: '/admin';
 $markets = Countries::accessible();
+$activeHref = AdminNav::activeHref($path);
 $initials = strtoupper(mb_substr($me['name'] ?? '?', 0, 1) . mb_substr(strstr(($me['name'] ?? '') . ' ', ' ') ?: '', 1, 1));
 ?><!doctype html>
 <html lang="en">
@@ -36,7 +37,7 @@ $initials = strtoupper(mb_substr($me['name'] ?? '?', 0, 1) . mb_substr(strstr(($
                 <div class="nav-group">
                     <div class="nav-group-title"><?= e($group['title']) ?></div>
                     <?php foreach ($group['items'] as $item): ?>
-                        <a class="nav-link<?= AdminNav::isActive($item['href'], $path) ? ' active' : '' ?>" href="<?= e($item['href']) ?>" title="<?= e($item['label']) ?>">
+                        <a class="nav-link<?= $item['href'] === $activeHref ? ' active' : '' ?>" href="<?= e($item['href']) ?>" title="<?= e($item['label']) ?>">
                             <?= Icons::svg($item['icon'], 'icon', 18) ?><span><?= e($item['label']) ?></span>
                         </a>
                     <?php endforeach; ?>

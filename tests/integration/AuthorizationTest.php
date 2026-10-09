@@ -65,3 +65,16 @@ test('wrong passwords never reveal whether an account exists', function (): void
     assert_same(null, Auth::attempt('unknown@test.local', 'wrong'));
     assert_true(Auth::attempt('known@test.local', 'Passw0rdPassw0rd') !== null);
 });
+
+test('only the closest menu item is highlighted', function (): void {
+    sign_in_as('admin');
+    $_SERVER['REQUEST_URI'] = '/admin/products/categories'; // the layout reads the address from here
+    $body = dispatch(fake_request('GET', '/admin/products/categories'))->body;
+    assert_same(1, substr_count($body, 'nav-link active'), 'one active menu item');
+    assert_contains('nav-link active" href="/admin/products/categories"', $body);
+    $_SERVER['REQUEST_URI'] = '/admin/products';
+    $body = dispatch(fake_request('GET', '/admin/products'))->body;
+    unset($_SERVER['REQUEST_URI']);
+    assert_contains('nav-link active" href="/admin/products"', $body);
+    assert_same(1, substr_count($body, 'nav-link active'));
+});
