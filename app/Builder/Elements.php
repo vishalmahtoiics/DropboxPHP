@@ -572,11 +572,12 @@ final class Elements
                             C::c('color', 'hover', 'Hover / current colour', '', ['css' => ['{{W}} .bx-nav-list > li > a:hover, {{W}} .bx-nav-list > li > a.active' => 'color:{{V}}']]),
                             C::c('color', 'heading_color', 'Column heading colour', '', ['showWhen' => ['layout' => ['columns']], 'css' => ['{{W}} .bx-nav-columns .bx-nav-list > li > a' => 'color:{{V}}']]),
                         ], C::typography('', '{{W}} .bx-nav-list > li > a'))],
-                        ['label' => 'Sub-menu and mobile panel', 'controls' => [
+                        ['label' => 'Sub-menu and mobile panel', 'controls' => array_merge([
                             C::c('color', 'sub_bg', 'Background', '', ['css' => ['{{W}} .bx-sub, {{W}} .bx-nav.is-open .bx-nav-list' => 'background:{{V}}']]),
                             C::c('color', 'sub_color', 'Link colour', '', ['css' => ['{{W}} .bx-sub a' => 'color:{{V}}']]),
+                            C::c('color', 'sub_hover', 'Link colour on hover', '', ['css' => ['{{W}} .bx-sub a:hover' => 'color:{{V}}']]),
                             C::c('color', 'toggle_color', 'Menu button colour', '', ['css' => ['{{W}} .bx-nav-toggle' => 'color:{{V}}']]),
-                        ]],
+                        ], C::typography('sub_', '{{W}} .bx-sub a strong'))],
                     ],
                 ],
             ],
