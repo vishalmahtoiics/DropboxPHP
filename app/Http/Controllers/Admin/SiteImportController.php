@@ -12,8 +12,9 @@ use App\Services\SiteImport;
 
 /**
  * Import site (/admin/site-import): upload a site package (.zip) made from
- * another site. Pages arrive as drafts; nothing goes live until someone
- * publishes it.
+ * another site. Pages arrive as drafts and nothing goes live until someone
+ * publishes it, unless "Replace everything" is on: then the package replaces
+ * what exists and goes live at once.
  *
  * Not in the admin menu on purpose: it is opened by its address. Like every
  * admin screen it needs a signed-in user (others get "not found"), and it is
@@ -43,6 +44,12 @@ final class SiteImportController extends AdminController
                 ? 'The file is larger than the server allows (' . self::uploadLimit() . '). Raise upload_max_filesize and post_max_size in the hosting panel.'
                 : 'Choose the site package (.zip) to import.');
         }
+        $replace = $this->request->bool('replace');
+        if ($replace) {
+            // Replacing puts pages, header, footer and menus live at once.
+            $this->authorize('pages.publish');
+            $this->authorize('navigation.manage');
+        }
         $countryId = $this->request->int('country_id') ?: (int) Countries::adminCurrent()['id'];
         Countries::assertAccess($countryId);
         $report = SiteImport::run((string) $upload['tmp_name'], [
@@ -51,8 +58,9 @@ final class SiteImportController extends AdminController
             'templates' => $this->request->bool('templates'),
             'menus' => $this->request->bool('menus'),
             'redirects' => $this->request->bool('redirects'),
+            'replace' => $replace,
         ], (int) $this->me['id']);
-        return $this->screen('site-import/report', ['title' => 'Site imported', 'report' => $report]);
+        return $this->screen('site-import/report', ['title' => 'Site imported', 'report' => $report, 'replace' => $replace]);
     }
 
     private function authorizeImport(): void

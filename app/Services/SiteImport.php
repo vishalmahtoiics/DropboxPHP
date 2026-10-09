@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Builder\Layout;
+use App\Builder\Store;
 use App\Builder\Transfer;
 use App\Core\Audit;
 use App\Core\Auth;
@@ -31,9 +32,14 @@ use ZipArchive;
  *
  * Everything is untrusted: the zip is read entry by entry with size limits
  * (nothing is extracted to disk under its own name), images go through the
- * normal upload checks, layouts through Transfer::parse, and pages are only
- * ever created as drafts. Pages that already exist keep their live version;
- * the import goes into their builder draft or is skipped.
+ * normal upload checks and layouts through Transfer::parse.
+ *
+ * By default nothing goes live: new pages are drafts, pages that already
+ * exist keep their live version (the import goes into their builder draft or
+ * is skipped) and the header and footer arrive as inactive templates.
+ * With "replace" the package becomes the live site: existing pages, forms,
+ * templates of the same name and menus are replaced, every imported page is
+ * published, and the package's header and footer are made active.
  */
 final class SiteImport
 {
@@ -52,12 +58,17 @@ final class SiteImport
     private array $report = ['pages' => [], 'templates' => [], 'forms' => [], 'menus' => [], 'redirects' => 0, 'media' => 0, 'warnings' => []];
 
     /**
-     * @param array{country_id:int, existing:string, templates:bool, menus:bool, redirects:bool} $options
-     *        existing: "draft" puts the import into an existing page's builder draft, "skip" leaves it alone
+     * @param array{country_id:int, existing:string, templates:bool, menus:bool, redirects:bool, replace?:bool} $options
+     *        existing: "draft" puts the import into an existing page's builder draft, "skip" leaves it alone;
+     *        replace: overwrite what exists and publish (existing, templates and menus are then ignored)
      * @return array the report
      */
     public static function run(string $zipPath, array $options, int $userId): array
     {
+        if (!empty($options['replace'])) {
+            $options = ['replace' => true, 'existing' => 'replace', 'templates' => true, 'menus' => true] + $options;
+        }
+        $options['replace'] = !empty($options['replace']);
         $self = new self();
         return $self->import($zipPath, $options, $userId);
     }
@@ -78,9 +89,9 @@ final class SiteImport
 
             $this->importMedia($manifest, $userId);
             DB::transaction(function () use ($manifest, $options, $userId): void {
-                $this->importForms($manifest['forms'] ?? []);
+                $this->importForms($manifest['forms'] ?? [], $options['replace']);
                 if ($options['templates']) {
-                    $this->importTemplates($manifest['templates'] ?? [], $userId);
+                    $this->importTemplates($manifest['templates'] ?? [], $userId, $options['replace']);
                 }
                 $this->importPages($manifest['pages'] ?? [], $options, $userId);
                 if ($options['menus']) {
@@ -93,8 +104,8 @@ final class SiteImport
         } finally {
             $this->zip->close();
         }
-        $created = count(array_filter($this->report['pages'], static fn ($p) => $p['action'] === 'created'));
-        Audit::record('created', 'Site import', null, sprintf('Imported "%s": %d new pages, %d images', (string) ($manifest['name'] ?? 'package'), $created, $this->report['media']));
+        $created = count(array_filter($this->report['pages'], static fn ($p) => in_array($p['action'], ['created', 'published'], true)));
+        Audit::record('created', 'Site import', null, sprintf('Imported "%s"%s: %d new pages, %d images', (string) ($manifest['name'] ?? 'package'), $options['replace'] ? ' (replacing the site)' : '', $created, $this->report['media']));
         return $this->report;
     }
 
@@ -228,7 +239,7 @@ final class SiteImport
 
     // --- forms -------------------------------------------------------------------------
 
-    private function importForms(array $forms): void
+    private function importForms(array $forms, bool $replace): void
     {
         foreach (array_slice($forms, 0, 200) as $form) {
             if (!is_array($form)) {
@@ -239,8 +250,27 @@ final class SiteImport
             if ($slug === '' || $name === '') {
                 continue;
             }
-            if (DB::value('SELECT id FROM forms WHERE slug = ?', [$slug])) {
+            $existingId = (int) DB::value('SELECT id FROM forms WHERE slug = ?', [$slug]);
+            if ($existingId && !$replace) {
                 $this->report['forms'][] = ['slug' => $slug, 'name' => $name, 'action' => 'kept'];
+                continue;
+            }
+            if ($existingId) {
+                if (!Auth::can('forms.edit')) {
+                    $this->report['warnings'][] = 'Form "' . $name . '" was kept: your role cannot edit forms.';
+                    continue;
+                }
+                $fields = $this->formFields((array) ($form['fields'] ?? []));
+                if (!$fields) {
+                    continue;
+                }
+                // Leads keep their own copy of what was sent, so the fields can be rebuilt.
+                DB::update('forms', $this->formRow($form, $name), ['id' => $existingId]);
+                DB::delete('form_fields', ['form_id' => $existingId]);
+                foreach ($fields as $i => $f) {
+                    DB::insert('form_fields', $f + ['form_id' => $existingId, 'sort_order' => ($i + 1) * 10]);
+                }
+                $this->report['forms'][] = ['slug' => $slug, 'name' => $name, 'action' => 'replaced'];
                 continue;
             }
             if (!Auth::can('forms.create')) {
@@ -251,15 +281,11 @@ final class SiteImport
             if (!$fields) {
                 continue;
             }
-            $id = DB::insert('forms', [
-                'name' => $name,
+            $id = DB::insert('forms', $this->formRow($form, $name) + [
                 'slug' => $slug,
                 'is_active' => 1,
-                'submit_label' => Sanitizer::line((string) ($form['submit_label'] ?? 'Submit'), 80) ?: 'Submit',
-                'success_message' => Sanitizer::text((string) ($form['success_message'] ?? ''), 1000) ?: 'Thank you! We will get back to you shortly.',
                 'lead_source' => 'Website Form',
                 'creates_lead' => 1,
-                'design' => ['columns' => (int) ($form['columns'] ?? 1) === 2 ? 2 : 1],
             ]);
             foreach ($fields as $i => $f) {
                 DB::insert('form_fields', $f + ['form_id' => $id, 'sort_order' => ($i + 1) * 10]);
@@ -267,6 +293,17 @@ final class SiteImport
             $this->report['forms'][] = ['slug' => $slug, 'name' => $name, 'action' => 'created'];
         }
         Forms::clearCache();
+    }
+
+    /** The columns of a form row that come from the package. */
+    private function formRow(array $form, string $name): array
+    {
+        return [
+            'name' => $name,
+            'submit_label' => Sanitizer::line((string) ($form['submit_label'] ?? 'Submit'), 80) ?: 'Submit',
+            'success_message' => Sanitizer::text((string) ($form['success_message'] ?? ''), 1000) ?: 'Thank you! We will get back to you shortly.',
+            'design' => ['columns' => (int) ($form['columns'] ?? 1) === 2 ? 2 : 1],
+        ];
     }
 
     /** @return list<array<string,mixed>> */
@@ -310,7 +347,7 @@ final class SiteImport
 
     // --- templates ---------------------------------------------------------------------
 
-    private function importTemplates(array $templates, int $userId): void
+    private function importTemplates(array $templates, int $userId, bool $replace): void
     {
         foreach (array_slice($templates, 0, 100) as $t) {
             $kind = is_array($t) ? (string) ($t['kind'] ?? '') : '';
@@ -327,9 +364,20 @@ final class SiteImport
             if ($layout === null) {
                 continue;
             }
-            // Never made active here: the site's header and footer only change when someone chooses to.
-            $id = DB::insert('builder_templates', ['name' => $name, 'kind' => $kind, 'layout' => Layout::encode($layout), 'created_by_id' => $userId, 'updated_by_id' => $userId]);
-            $this->report['templates'][] = ['id' => $id, 'name' => $name, 'kind' => $kind];
+            $existing = $replace ? DB::first('SELECT * FROM builder_templates WHERE kind = ? AND name = ? ORDER BY id LIMIT 1', [$kind, $name]) : null;
+            if ($existing) {
+                Store::save('template', $existing, $layout, true);
+                $id = (int) $existing['id'];
+            } else {
+                $id = DB::insert('builder_templates', ['name' => $name, 'kind' => $kind, 'layout' => Layout::encode($layout), 'created_by_id' => $userId, 'updated_by_id' => $userId]);
+            }
+            // Without "replace" never made active: the site's header and footer only change when someone chooses to.
+            $active = $replace && in_array($kind, ['header', 'footer'], true);
+            if ($active) {
+                DB::query('UPDATE builder_templates SET is_default = 0 WHERE kind = ?', [$kind]);
+                DB::update('builder_templates', ['is_default' => 1], ['id' => $id]);
+            }
+            $this->report['templates'][] = ['id' => $id, 'name' => $name, 'kind' => $kind, 'action' => $existing ? 'replaced' : 'created', 'active' => $active];
         }
     }
 
@@ -347,8 +395,9 @@ final class SiteImport
             if ($title === '') {
                 continue;
             }
-            $existing = DB::first('SELECT id, title FROM pages WHERE country_id = ? AND slug = ? AND deleted_at IS NULL', [$countryId, $slug]);
-            if ($existing && $options['existing'] !== 'draft') {
+            $replace = $options['replace'];
+            $existing = DB::first('SELECT * FROM pages WHERE country_id = ? AND slug = ? AND deleted_at IS NULL', [$countryId, $slug]);
+            if ($existing && !$replace && $options['existing'] !== 'draft') {
                 $this->report['pages'][] = ['id' => (int) $existing['id'], 'title' => $title, 'slug' => $slug, 'action' => 'skipped', 'note' => 'a page already uses this address'];
                 continue;
             }
@@ -369,6 +418,18 @@ final class SiteImport
                 'seo_title' => Sanitizer::line((string) ($p['seo_title'] ?? ''), 255) ?: null,
                 'seo_description' => Sanitizer::text((string) ($p['seo_description'] ?? ''), 500) ?: null,
             ];
+            if ($existing && $replace) {
+                // The package's version goes live (the old one stays in the page's builder history).
+                Store::save('page', $existing, $layout, true);
+                DB::update('pages', $seo + [
+                    'title' => $title,
+                    'status' => 'PUBLISHED',
+                    'published_at' => $existing['published_at'] && strtotime((string) $existing['published_at']) <= time() ? $existing['published_at'] : now(),
+                    'updated_by_id' => $userId,
+                ], ['id' => $existing['id']]);
+                $this->report['pages'][] = ['id' => (int) $existing['id'], 'title' => $title, 'slug' => $slug, 'action' => 'replaced', 'note' => 'replaced and published'];
+                continue;
+            }
             if ($existing) {
                 // The live page stays as it is; the import waits in the builder as a draft.
                 DB::update('pages', ['builder_draft' => Layout::encode($layout), 'updated_by_id' => $userId], ['id' => $existing['id']]);
@@ -379,7 +440,8 @@ final class SiteImport
                 'country_id' => $countryId,
                 'title' => $title,
                 'slug' => $slug,
-                'status' => 'DRAFT',
+                'status' => $replace ? 'PUBLISHED' : 'DRAFT',
+                'published_at' => $replace ? now() : null,
                 'show_header' => array_key_exists('show_header', $p) && !$p['show_header'] ? 0 : 1,
                 'show_footer' => array_key_exists('show_footer', $p) && !$p['show_footer'] ? 0 : 1,
                 'editor' => 'builder',
@@ -387,7 +449,7 @@ final class SiteImport
                 'created_by_id' => $userId,
                 'updated_by_id' => $userId,
             ]);
-            $this->report['pages'][] = ['id' => $id, 'title' => $title, 'slug' => $slug, 'action' => 'created', 'note' => ''];
+            $this->report['pages'][] = ['id' => $id, 'title' => $title, 'slug' => $slug, 'action' => $replace ? 'published' : 'created', 'note' => ''];
         }
     }
 
