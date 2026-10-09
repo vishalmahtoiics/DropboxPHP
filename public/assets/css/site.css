@@ -452,16 +452,17 @@ dialog::backdrop { background: rgb(11 27 52 / .55); backdrop-filter: blur(3px); 
 
 /* =========================================================================
    Builder layouts (App\Builder). Every element carries .el-<id>; the
-   per-element CSS generated from its settings overrides these defaults.
+   per-element CSS generated from its settings overrides these defaults
+   (the defaults are wrapped in :where() so a single .el-<id> rule beats them).
    ========================================================================= */
 .bx-root { display: block; }
 .bx-con { position: relative; display: block; min-width: 0; }
-.bx-con.bx-top { padding: 2.5rem var(--gutter); }
+:where(.bx-con.bx-top) { padding: 2.5rem var(--gutter); }
 a.bx-con { color: inherit; text-decoration: none; }
 .bx-inner { display: flex; flex-direction: column; gap: 20px; width: 100%; margin-inline: auto; }
-.bx-boxed.bx-top > .bx-inner { max-width: var(--container); }
-.bx-inner > .bx-child { flex: 1 1 0%; min-width: 0; }
-.bx-inner > .bx-w { min-width: 0; max-width: 100%; }
+:where(.bx-boxed.bx-top) > .bx-inner { max-width: var(--container); }
+:where(.bx-inner > .bx-child) { flex: 1 1 0%; min-width: 0; }
+:where(.bx-inner > .bx-w) { min-width: 0; max-width: 100%; }
 .bx-w > :last-child { margin-bottom: 0; }
 .bx-w .cms-section.bx-flush { padding-block: 0; }
 
@@ -548,7 +549,7 @@ a.bx-con { color: inherit; text-decoration: none; }
 @media (min-width: 768px) and (max-width: 1024px) { .bx-hide-tablet { display: none !important; } }
 @media (max-width: 767px) {
   .bx-hide-mobile { display: none !important; }
-  .bx-con.bx-top { padding: 2rem var(--gutter); }
+  :where(.bx-con.bx-top) { padding: 2rem var(--gutter); }
   .bx-iconbox.bx-pos-left, .bx-iconbox.bx-pos-right, .bx-imagebox.bx-pos-left, .bx-imagebox.bx-pos-right { flex-direction: column; }
   .bx-imagebox .bx-imagebox-img { width: 100% !important; }
   .bx-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
