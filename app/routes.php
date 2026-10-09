@@ -153,6 +153,8 @@ return static function (Router $r): void {
     $r->get('/admin/media/picker', [Admin\MediaController::class, 'picker']);
     $r->post('/admin/media/upload', [Admin\MediaController::class, 'upload']);
     $r->post('/admin/media/bulk', [Admin\MediaController::class, 'bulk']);
+    $r->get('/admin/media/unused', [Admin\MediaController::class, 'unused']);
+    $r->post('/admin/media/unused', [Admin\MediaController::class, 'cleanUnused']);
     $r->post('/admin/media/folders', [Admin\MediaController::class, 'createFolder']);
     $r->post('/admin/media/folders/{id}/delete', [Admin\MediaController::class, 'deleteFolder']);
     $r->post('/admin/media/{id}/rename', [Admin\MediaController::class, 'rename']);
