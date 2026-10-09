@@ -11,8 +11,14 @@ use App\Services\Countries;
 use App\Services\SiteImport;
 
 /**
- * Admin → Import site: upload a site package (.zip) made from another site.
- * Pages arrive as drafts; nothing goes live until someone publishes it.
+ * Import site (/admin/site-import): upload a site package (.zip) made from
+ * another site. Pages arrive as drafts; nothing goes live until someone
+ * publishes it.
+ *
+ * Not in the admin menu on purpose: it is opened by its address. Like every
+ * admin screen it needs a signed-in user (others get "not found"), and it is
+ * limited to administrators — settings.manage on top of creating pages and
+ * uploading media.
  */
 final class SiteImportController extends AdminController
 {
@@ -51,6 +57,7 @@ final class SiteImportController extends AdminController
 
     private function authorizeImport(): void
     {
+        $this->authorize('settings.manage');
         $this->authorize('pages.create');
         $this->authorize('media.upload');
     }

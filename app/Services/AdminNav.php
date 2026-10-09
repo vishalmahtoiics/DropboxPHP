@@ -22,7 +22,6 @@ final class AdminNav
                 ['label' => 'Cities', 'href' => '/admin/cities', 'icon' => 'map-pin', 'perm' => 'pages.view'],
                 ['label' => 'Navigation', 'href' => '/admin/navigation', 'icon' => 'navigation', 'perm' => 'navigation.manage'],
                 ['label' => 'Media library', 'href' => '/admin/media', 'icon' => 'image', 'perm' => 'media.view'],
-                ['label' => 'Import site', 'href' => '/admin/site-import', 'icon' => 'upload', 'perm' => 'pages.create'],
             ]],
             ['title' => 'Catalogue', 'items' => [
                 ['label' => 'Products', 'href' => '/admin/products', 'icon' => 'package', 'perm' => 'products.view'],
