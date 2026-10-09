@@ -206,6 +206,9 @@ return static function (Router $r): void {
     $r->post('/admin/builder/{kind}/{id}/import', [Admin\BuilderController::class, 'import']);
     $r->get('/admin/builder/{kind}/{id}/revisions/{revision}', [Admin\BuilderController::class, 'revision']);
 
+    $r->get('/admin/site-import', [Admin\SiteImportController::class, 'show']);
+    $r->post('/admin/site-import', [Admin\SiteImportController::class, 'store']);
+
     $r->get('/admin/settings', [Admin\SettingsController::class, 'index']);
     $r->post('/admin/settings/system', [Admin\SettingsController::class, 'saveSystem']);
     $r->post('/admin/settings/system/migrate', [Admin\SettingsController::class, 'migrate']);

@@ -132,6 +132,12 @@ Pages and product pages can be designed visually, in the style of Elementor:
   - **Admin → Builder templates → Import a template** turns a file into a new template (page, section, product, header or footer). It never becomes active by itself. Every template row also has a download button.
   - Files move layouts between pages, products and sites without touching the database. Forms, menus, products and media files are not inside the file: the layout only refers to them (by form, menu location or address), so they must exist on the site the file is imported into.
   - An imported file is treated like anything else the editor sends: it is cleaned, gets fresh element ids, and loses its custom HTML/CSS when your role cannot add code.
+- **Import a whole site** (Admin → Website → **Import site**):
+  - Upload a *site package* (.zip): pages built in the visual builder, their images, forms, the header and footer, menus and redirects.
+  - New pages are created as **drafts** at the addresses in the package. A page that already exists keeps its live version and gets the import as its builder draft, or is skipped.
+  - Images go into the Media library (a folder named after the package) through the normal upload checks; the pages point at their new addresses.
+  - Forms are created when their key is free; the header and footer arrive as inactive templates; menus are replaced only when you tick the option; redirects are added unless they already exist.
+  - Each part needs its own permission (pages and media to import at all; forms, navigation, SEO and code for those parts). The package format is described in `App\Services\SiteImport`.
 - **Changing addresses:**
   - The builder's ⚙ **settings** dialog changes the page or product title, its address (URL), SEO title and description, and whether the page shows the header and footer.
   - When a live page's address changes, the old address keeps working with a permanent redirect.
