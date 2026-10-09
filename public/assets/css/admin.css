@@ -225,6 +225,10 @@ legend { font-weight: 600; padding: 0 .35rem; }
 .toolbar { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; padding: .9rem 1.25rem; border-bottom: 1px solid var(--border); }
 .toolbar .input, .toolbar .select { width: auto; min-width: 150px; }
 .toolbar .search { min-width: 220px; flex: 1 1 220px; max-width: 360px; }
+.bulk-bar { padding-block: .6rem; background: var(--surface-2, #f8fafc); }
+.bulk-bar.has-selection { background: color-mix(in srgb, var(--brand, #2563eb) 8%, var(--surface, #fff)); }
+.bulk-bar .select { min-width: 200px; }
+th.check, td.check { width: 36px; padding-right: 0; }
 .pagination { display: flex; gap: .35rem; align-items: center; justify-content: space-between; padding: .85rem 1.25rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
 .pagination .pages { display: flex; gap: .25rem; }
 
@@ -279,6 +283,10 @@ dialog::backdrop { background: rgba(11, 27, 52, .45); backdrop-filter: blur(2px)
 .media-input { display: flex; gap: .5rem; align-items: center; }
 .media-input .thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); background: var(--surface-2); flex-shrink: 0; }
 .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .75rem; }
+.media-tile-wrap { position: relative; min-width: 0; }
+.media-tile-wrap > .media-tile { display: block; height: 100%; }
+.media-check { position: absolute; top: 6px; left: 6px; z-index: 2; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: rgba(255, 255, 255, .92); box-shadow: 0 1px 3px rgba(0, 0, 0, .2); }
+.media-check input { margin: 0; width: 16px; height: 16px; }
 .media-tile { position: relative; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); cursor: pointer; text-align: left; padding: 0; font: inherit; color: inherit; }
 .media-tile img, .media-tile .file-ph { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: repeating-conic-gradient(var(--surface-2) 0 25%, var(--surface) 0 50%) 0 0 / 16px 16px; }
 .media-tile .file-ph { display: grid; place-items: center; color: var(--faint); }

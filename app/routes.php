@@ -45,6 +45,7 @@ return static function (Router $r): void {
     $r->get('/admin/pages', [Admin\PageController::class, 'index']);
     $r->get('/admin/pages/new', [Admin\PageController::class, 'create']);
     $r->post('/admin/pages', [Admin\PageController::class, 'store']);
+    $r->post('/admin/pages/bulk', [Admin\PageController::class, 'bulk']);
     $r->get('/admin/pages/{id}', [Admin\PageController::class, 'edit']);
     $r->post('/admin/pages/{id}', [Admin\PageController::class, 'update']);
     $r->post('/admin/pages/{id}/delete', [Admin\PageController::class, 'destroy']);
@@ -76,6 +77,7 @@ return static function (Router $r): void {
     $r->get('/admin/products', [Admin\ProductController::class, 'index']);
     $r->get('/admin/products/new', [Admin\ProductController::class, 'create']);
     $r->post('/admin/products', [Admin\ProductController::class, 'store']);
+    $r->post('/admin/products/bulk', [Admin\ProductController::class, 'bulk']);
     $r->get('/admin/products/order', [Admin\ProductController::class, 'order']);
     $r->post('/admin/products/order', [Admin\ProductController::class, 'saveOrder']);
     $r->get('/admin/products/categories', [Admin\ProductTaxonomyController::class, 'categories']);
@@ -95,6 +97,7 @@ return static function (Router $r): void {
     $r->get('/admin/blog', [Admin\BlogController::class, 'index']);
     $r->get('/admin/blog/new', [Admin\BlogController::class, 'create']);
     $r->post('/admin/blog', [Admin\BlogController::class, 'store']);
+    $r->post('/admin/blog/bulk', [Admin\BlogController::class, 'bulk']);
     $r->get('/admin/blog/categories', [Admin\BlogTaxonomyController::class, 'categories']);
     $r->post('/admin/blog/categories', [Admin\BlogTaxonomyController::class, 'saveCategory']);
     $r->post('/admin/blog/categories/{id}/delete', [Admin\BlogTaxonomyController::class, 'deleteCategory']);
@@ -111,6 +114,7 @@ return static function (Router $r): void {
     $r->get('/admin/forms', [Admin\FormController::class, 'index']);
     $r->get('/admin/forms/new', [Admin\FormController::class, 'create']);
     $r->post('/admin/forms', [Admin\FormController::class, 'store']);
+    $r->post('/admin/forms/bulk', [Admin\FormController::class, 'bulk']);
     $r->get('/admin/forms/{id}', [Admin\FormController::class, 'edit']);
     $r->post('/admin/forms/{id}', [Admin\FormController::class, 'update']);
     $r->post('/admin/forms/{id}/delete', [Admin\FormController::class, 'destroy']);
@@ -135,6 +139,7 @@ return static function (Router $r): void {
     $r->get('/admin/customers', [Admin\CustomerController::class, 'index']);
     $r->get('/admin/customers/new', [Admin\CustomerController::class, 'create']);
     $r->post('/admin/customers', [Admin\CustomerController::class, 'store']);
+    $r->post('/admin/customers/bulk', [Admin\CustomerController::class, 'bulk']);
     $r->get('/admin/customers/{id}', [Admin\CustomerController::class, 'show']);
     $r->post('/admin/customers/{id}', [Admin\CustomerController::class, 'update']);
     $r->post('/admin/customers/{id}/note', [Admin\CustomerController::class, 'note']);
@@ -147,6 +152,7 @@ return static function (Router $r): void {
     $r->get('/admin/media', [Admin\MediaController::class, 'index']);
     $r->get('/admin/media/picker', [Admin\MediaController::class, 'picker']);
     $r->post('/admin/media/upload', [Admin\MediaController::class, 'upload']);
+    $r->post('/admin/media/bulk', [Admin\MediaController::class, 'bulk']);
     $r->post('/admin/media/folders', [Admin\MediaController::class, 'createFolder']);
     $r->post('/admin/media/folders/{id}/delete', [Admin\MediaController::class, 'deleteFolder']);
     $r->post('/admin/media/{id}/rename', [Admin\MediaController::class, 'rename']);
@@ -162,6 +168,7 @@ return static function (Router $r): void {
     $r->post('/admin/seo', [Admin\SeoController::class, 'save']);
     $r->get('/admin/redirects', [Admin\RedirectController::class, 'index']);
     $r->post('/admin/redirects', [Admin\RedirectController::class, 'save']);
+    $r->post('/admin/redirects/bulk', [Admin\RedirectController::class, 'bulk']);
     $r->post('/admin/redirects/{id}/delete', [Admin\RedirectController::class, 'destroy']);
 
     // Marketing
@@ -172,6 +179,7 @@ return static function (Router $r): void {
     $r->get('/admin/popups', [Admin\PopupController::class, 'index']);
     $r->get('/admin/popups/new', [Admin\PopupController::class, 'create']);
     $r->post('/admin/popups', [Admin\PopupController::class, 'store']);
+    $r->post('/admin/popups/bulk', [Admin\PopupController::class, 'bulk']);
     $r->get('/admin/popups/{id}', [Admin\PopupController::class, 'edit']);
     $r->post('/admin/popups/{id}', [Admin\PopupController::class, 'update']);
     $r->post('/admin/popups/{id}/delete', [Admin\PopupController::class, 'destroy']);
@@ -189,6 +197,7 @@ return static function (Router $r): void {
     $r->get('/admin/builder/templates.json', [Admin\BuilderController::class, 'templateList']);
     $r->post('/admin/builder/templates/from-selection', [Admin\BuilderController::class, 'saveSelection']);
     $r->post('/admin/builder/templates/import', [Admin\BuilderController::class, 'importTemplate']);
+    $r->post('/admin/builder/templates/bulk', [Admin\BuilderController::class, 'bulkTemplates']);
     $r->get('/admin/builder/templates/{id}/elements', [Admin\BuilderController::class, 'templateElements']);
     $r->post('/admin/builder/templates/{id}', [Admin\BuilderController::class, 'updateTemplate']);
     $r->post('/admin/pages/{id}/builder', [Admin\BuilderController::class, 'enablePage']);
@@ -242,6 +251,7 @@ return static function (Router $r): void {
 
     // System
     $r->get('/admin/trash', [Admin\TrashController::class, 'index']);
+    $r->post('/admin/trash/bulk', [Admin\TrashController::class, 'bulk']);
     $r->post('/admin/trash/{type}/{id}/restore', [Admin\TrashController::class, 'restore']);
     $r->post('/admin/trash/{type}/{id}/purge', [Admin\TrashController::class, 'purge']);
     $r->get('/admin/backups', [Admin\BackupController::class, 'index']);

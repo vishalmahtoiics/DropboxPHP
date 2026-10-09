@@ -36,24 +36,28 @@ $anyFilter = array_filter($f) !== [];
     <?php if (!$rows): ?>
         <div class="empty"><?= Icons::svg('inbox', 'icon', 32) ?><p>No leads match.</p></div>
     <?php else: ?>
-    <form method="post" action="/admin/leads/bulk" data-confirm="Apply this action to the selected leads?">
-        <?= csrf_field() ?>
-        <div class="toolbar">
-            <span class="small muted">With selected:</span>
-            <select class="select input-sm" name="action" required>
-                <option value="">Choose an action</option>
-                <?php if (can('leads.edit')): ?><optgroup label="Set status"><?php foreach (Leads::STATUSES as $k => $v): ?><option value="status:<?= $k ?>"><?= $v ?></option><?php endforeach; ?></optgroup><?php endif; ?>
-                <?php if (can('leads.assign')): ?><optgroup label="Assign to"><option value="assign:none">Nobody</option><?php foreach ($staff as $k => $v): ?><option value="assign:<?= (int) $k ?>"><?= e($v) ?></option><?php endforeach; ?></optgroup><?php endif; ?>
-                <?php if (can('leads.delete')): ?><option value="delete">Move to recycle bin</option><?php endif; ?>
-            </select>
-            <button class="btn btn-secondary btn-sm" type="submit">Apply</button>
-        </div>
+    <?php
+    $bulk = [];
+    if (can('leads.edit')) {
+        $bulk['Set status'] = array_combine(array_map(static fn ($k) => 'status:' . $k, array_keys(Leads::STATUSES)), Leads::STATUSES);
+    }
+    if (can('leads.assign')) {
+        $bulk['Assign to'] = ['assign:none' => 'Nobody'];
+        foreach ($staff as $k => $v) {
+            $bulk['Assign to']['assign:' . (int) $k] = $v;
+        }
+    }
+    if (can('leads.delete')) {
+        $bulk['delete'] = 'Move to recycle bin';
+    }
+    ?>
+    <?= Form::bulkBar('bulk-leads', '/admin/leads/bulk', $bulk, 'leads') ?>
         <div class="table-wrap"><table class="table">
-            <thead><tr><th style="width:32px"><input type="checkbox" data-check-all="ids[]" aria-label="Select all"></th><?= Form::sortTh('name', 'Lead', $sort, $dir) ?><?= Form::sortTh('status', 'Status', $sort, $dir) ?><th class="hide-sm">Product</th><th class="hide-sm">Source</th><th class="hide-sm">Owner</th><?= Form::sortTh('value', 'Value', $sort, $dir) ?><?= Form::sortTh('created_at', 'Received', $sort, $dir) ?></tr></thead>
+            <thead><tr><?php if ($bulk): ?><th class="check"><?= Form::bulkAll('bulk-leads') ?></th><?php endif; ?><?= Form::sortTh('name', 'Lead', $sort, $dir) ?><?= Form::sortTh('status', 'Status', $sort, $dir) ?><th class="hide-sm">Product</th><th class="hide-sm">Source</th><th class="hide-sm">Owner</th><?= Form::sortTh('value', 'Value', $sort, $dir) ?><?= Form::sortTh('created_at', 'Received', $sort, $dir) ?></tr></thead>
             <tbody>
             <?php foreach ($rows as $l): ?>
                 <tr>
-                    <td><input type="checkbox" name="ids[]" value="<?= (int) $l['id'] ?>" aria-label="Select <?= e($l['name']) ?>"></td>
+                    <?php if ($bulk): ?><td class="check"><?= Form::bulkCheck('bulk-leads', (int) $l['id'], $l['name']) ?></td><?php endif; ?>
                     <td><a class="row-title" href="/admin/leads/<?= (int) $l['id'] ?>"><?= e($l['name']) ?></a><?php if ($l['priority'] === 'HIGH'): ?> <span class="badge HIGH">High</span><?php endif; ?>
                         <div class="small muted"><?= e($l['email']) ?><?= $l['company'] ? ' · ' . e($l['company']) : '' ?></div></td>
                     <td><?= Form::badge($l['status']) ?><?php if ($l['follow_up_at']): ?><div class="small <?= strtotime($l['follow_up_at']) < time() && !in_array($l['status'], ['WON', 'LOST', 'SPAM'], true) ? 'error-text' : 'muted' ?>">↻ <?= e(format_date($l['follow_up_at'])) ?></div><?php endif; ?></td>
@@ -66,7 +70,6 @@ $anyFilter = array_filter($f) !== [];
             <?php endforeach; ?>
             </tbody>
         </table></div>
-    </form>
     <?= Form::pagination($pageNo, $pages, $total, 'leads') ?>
     <?php endif; ?>
 </div>

@@ -13,11 +13,13 @@ $activeLabel = ['header' => 'Active header', 'footer' => 'Active footer', 'produ
             <?php if (!$templates): ?>
                 <div class="card-body"><p class="muted">No templates yet. Create a product template to design all product pages at once, or save any container from the builder's right-click menu.</p></div>
             <?php else: ?>
+            <?= Form::bulkBar('bulk-templates', '/admin/builder/templates/bulk', ['delete' => 'Delete'], 'templates') ?>
             <table class="table">
-                <thead><tr><th>Name</th><th>Type</th><th>Updated</th><th></th></tr></thead>
+                <thead><tr><th class="check"><?= Form::bulkAll('bulk-templates') ?></th><th>Name</th><th>Type</th><th>Updated</th><th></th></tr></thead>
                 <tbody>
                 <?php foreach ($templates as $t): ?>
                     <tr>
+                        <td class="check"><?= Form::bulkCheck('bulk-templates', (int) $t['id'], $t['name']) ?></td>
                         <td><a href="/admin/builder/template/<?= (int) $t['id'] ?>"><strong><?= e($t['name']) ?></strong></a>
                             <?php if ((int) $t['is_default']): ?> <span class="badge green"><?= e($activeLabel[$t['kind']] ?? 'Default') ?></span><?php endif; ?>
                             <?php if ((int) $t['has_draft']): ?> <span class="badge orange">Draft</span><?php endif; ?>

@@ -100,6 +100,47 @@ final class Form
         return self::wrap($name, $label, $html . '</select>', $o);
     }
 
+    /**
+     * The "with selected" bar above a list. Row checkboxes (bulkCheck) join it
+     * through the form attribute, so rows can keep their own little forms.
+     *
+     * @param array<string, string|array<string, string>> $actions value => label, or group label => [value => label]
+     */
+    public static function bulkBar(string $id, string $url, array $actions, string $noun = 'items'): string
+    {
+        if ($actions === []) {
+            return '';
+        }
+        $options = '<option value="">Choose an action…</option>';
+        foreach ($actions as $value => $label) {
+            if (is_array($label)) {
+                $options .= '<optgroup label="' . e($value) . '">';
+                foreach ($label as $v => $l) {
+                    $options .= '<option value="' . e($v) . '">' . e($l) . '</option>';
+                }
+                $options .= '</optgroup>';
+            } else {
+                $options .= '<option value="' . e($value) . '">' . e($label) . '</option>';
+            }
+        }
+        return '<form id="' . e($id) . '" class="toolbar bulk-bar" method="post" action="' . e($url) . '" data-bulk-form data-noun="' . e($noun) . '">' . csrf_field()
+            . '<span class="small muted" data-bulk-count aria-live="polite">Select ' . e($noun) . ' to act on several at once</span>'
+            . '<select class="select input-sm" name="action" aria-label="Action for the selected ' . e($noun) . '">' . $options . '</select>'
+            . '<button class="btn btn-secondary btn-sm" type="submit" data-bulk-apply disabled>Apply</button></form>';
+    }
+
+    /** The "select all" checkbox for a bulk bar's list. */
+    public static function bulkAll(string $form): string
+    {
+        return '<input type="checkbox" data-bulk-all="' . e($form) . '" aria-label="Select all">';
+    }
+
+    /** A row checkbox that belongs to the bulk bar $form. */
+    public static function bulkCheck(string $form, int|string $value, string $label): string
+    {
+        return '<input type="checkbox" name="ids[]" value="' . e((string) $value) . '" form="' . e($form) . '" data-bulk-item aria-label="Select ' . e($label) . '">';
+    }
+
     /** A switch; posts "1" when on, nothing when off. @param array<string,mixed> $o */
     public static function toggle(string $name, string $label, mixed $checked = false, array $o = []): string
     {

@@ -340,6 +340,32 @@ final class ProductController extends AdminController
         return $this->redirect('/admin/products/' . $newId);
     }
 
+    /** The list's "with selected" actions. */
+    public function bulk(): Response
+    {
+        $action = $this->request->str('action');
+        $ids = $this->bulkIds();
+        $status = ['publish' => 'PUBLISHED', 'draft' => 'DRAFT', 'archive' => 'ARCHIVED'][$action] ?? null;
+        if (!$ids || ($status === null && $action !== 'delete')) {
+            $this->flash('Select products and an action.', 'warning');
+            return $this->back('/admin/products');
+        }
+        $this->authorize($action === 'delete' ? 'products.delete' : 'products.edit');
+        [$in, $params] = DB::in($ids);
+        $done = 0;
+        foreach (DB::all("SELECT * FROM products WHERE id IN ($in) AND deleted_at IS NULL", $params) as $p) {
+            if ($action === 'delete') {
+                DB::update('products', ['deleted_at' => now(), 'slug' => Slugs::trashed($p['slug'], (int) $p['id']), 'sku' => null, 'status' => 'ARCHIVED'], ['id' => $p['id']]);
+                Audit::record('deleted', 'Product', $p['id'], 'Moved "' . $p['name'] . '" to the recycle bin', ['sku' => $p['sku']]);
+            } else {
+                DB::update('products', ['status' => $status, 'published_at' => $status === 'PUBLISHED' ? ($p['published_at'] ?? now()) : $p['published_at']], ['id' => $p['id']]);
+                Audit::record($status === 'PUBLISHED' ? 'published' : 'status-changed', 'Product', $p['id'], $p['name'] . ' → ' . $status);
+            }
+            $done++;
+        }
+        return $this->bulkDone('/admin/products', $done, $done === 1 ? 'product' : 'products');
+    }
+
     public function destroy(string $id): Response
     {
         $this->authorize('products.delete');

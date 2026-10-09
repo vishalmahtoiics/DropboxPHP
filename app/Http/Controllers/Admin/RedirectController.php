@@ -80,6 +80,24 @@ final class RedirectController extends AdminController
         return $this->redirect('/admin/redirects');
     }
 
+    /** The list's "with selected" actions: switch on, switch off or delete. */
+    public function bulk(): Response
+    {
+        $this->authorize('seo.manage');
+        $action = $this->request->str('action');
+        $ids = $this->bulkIds();
+        if (!$ids || !in_array($action, ['activate', 'deactivate', 'delete'], true)) {
+            $this->flash('Select redirects and an action.', 'warning');
+            return $this->back('/admin/redirects');
+        }
+        [$in, $params] = DB::in($ids);
+        $done = $action === 'delete'
+            ? DB::query("DELETE FROM redirects WHERE id IN ($in)", $params)->rowCount()
+            : DB::query("UPDATE redirects SET is_active = ? WHERE id IN ($in)", array_merge([$action === 'activate' ? 1 : 0], $params))->rowCount();
+        Audit::record('bulk', 'Redirect', null, "$action on $done redirect(s)");
+        return $this->bulkDone('/admin/redirects', $done, $done === 1 ? 'redirect' : 'redirects');
+    }
+
     public function destroy(string $id): Response
     {
         $this->authorize('seo.manage');

@@ -16,10 +16,20 @@ use App\Http\Controllers\Admin\CustomerController;
         <select class="select" name="status" data-autosubmit><option value="">All statuses</option><?php foreach (CustomerController::STATUSES as $k => $v): ?><option value="<?= $k ?>"<?= $status === $k ? ' selected' : '' ?>><?= $v ?></option><?php endforeach; ?></select>
     </form>
     <?php if (!$rows): ?><div class="empty"><?= Icons::svg('briefcase', 'icon', 32) ?><p>No customers yet.</p></div><?php else: ?>
+    <?php
+    $bulk = [];
+    if (can('customers.edit')) {
+        $bulk['Set status'] = array_combine(array_map(static fn ($k) => 'status:' . $k, array_keys(CustomerController::STATUSES)), CustomerController::STATUSES);
+    }
+    if (can('customers.delete')) {
+        $bulk['delete'] = 'Move to recycle bin';
+    }
+    ?>
+    <?= Form::bulkBar('bulk-customers', '/admin/customers/bulk', $bulk, 'customers') ?>
     <div class="table-wrap"><table class="table">
-        <thead><tr><th>Customer</th><th>Status</th><th class="hide-sm">Subscriptions</th><th class="hide-sm">Next renewal</th><th class="hide-sm">Owner</th><th>Since</th></tr></thead>
+        <thead><tr><?php if ($bulk): ?><th class="check"><?= Form::bulkAll('bulk-customers') ?></th><?php endif; ?><th>Customer</th><th>Status</th><th class="hide-sm">Subscriptions</th><th class="hide-sm">Next renewal</th><th class="hide-sm">Owner</th><th>Since</th></tr></thead>
         <tbody><?php foreach ($rows as $c): ?>
-            <tr><td><a class="row-title" href="/admin/customers/<?= (int) $c['id'] ?>"><?= e($c['company'] ?: $c['name']) ?></a><div class="small muted"><?= e($c['company'] ? $c['name'] . ' · ' : '') ?><?= e($c['email']) ?></div></td>
+            <tr><?php if ($bulk): ?><td class="check"><?= Form::bulkCheck('bulk-customers', (int) $c['id'], $c['company'] ?: $c['name']) ?></td><?php endif; ?><td><a class="row-title" href="/admin/customers/<?= (int) $c['id'] ?>"><?= e($c['company'] ?: $c['name']) ?></a><div class="small muted"><?= e($c['company'] ? $c['name'] . ' · ' : '') ?><?= e($c['email']) ?></div></td>
                 <td><?= Form::badge($c['status']) ?></td><td class="hide-sm"><?= (int) $c['products'] ?></td>
                 <td class="hide-sm small"><?= e($c['next_renewal'] ? format_date($c['next_renewal']) : '—') ?></td>
                 <td class="hide-sm small"><?= e($c['owner'] ?? '—') ?></td><td class="small muted"><?= e(format_date($c['created_at'])) ?></td></tr>

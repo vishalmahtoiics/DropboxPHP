@@ -61,18 +61,11 @@ final class TrashController extends AdminController
 
     public function restore(string $type, string $id): Response
     {
-        [$table, $label, $perm, $hasSlug, $scoped] = $this->type($type);
+        [$table, $label, $perm, , $scoped] = $this->type($type);
         $this->authorize($perm);
         $row = $this->row($table, $this->id($id), $scoped);
-        $update = ['deleted_at' => null];
-        if ($hasSlug) {
-            $slug = Slugs::untrashed((string) $row['slug']);
-            $scope = $scoped ? ['country_id' => (int) $row['country_id']] : [];
-            $update['slug'] = Slugs::unique($table, $slug, (int) $row['id'], $scope);
-        }
-        DB::update($table, $update, ['id' => $row['id']]);
-        Audit::record('restored', ucfirst($type), $row['id'], (string) $row[$label]);
-        $this->flash('"' . $row[$label] . '" restored' . ($hasSlug && $update['slug'] !== Slugs::untrashed((string) $row['slug']) ? ' as /' . $update['slug'] . ' (its old address was taken)' : '') . '. It is a draft until you publish it again.');
+        $slug = $this->restoreRow($type, $row);
+        $this->flash('"' . $row[$label] . '" restored' . ($slug !== null && $slug !== Slugs::untrashed((string) $row['slug']) ? ' as /' . $slug . ' (its old address was taken)' : '') . '. It is a draft until you publish it again.');
         return $this->redirect('/admin/trash');
     }
 
@@ -81,15 +74,68 @@ final class TrashController extends AdminController
         [$table, $label, $perm, , $scoped] = $this->type($type);
         $this->authorize($perm);
         $row = $this->row($table, $this->id($id), $scoped);
-        try {
-            DB::delete($table, ['id' => $row['id']]);
-        } catch (\PDOException) {
+        if (!$this->purgeRow($type, $row)) {
             $this->flash('"' . $row[$label] . '" is still referenced (for example by leads or subscriptions) and stays in the recycle bin.', 'error');
             return $this->redirect('/admin/trash');
         }
-        Audit::record('purged', ucfirst($type), $row['id'], (string) $row[$label]);
         $this->flash('Deleted permanently.');
         return $this->redirect('/admin/trash');
+    }
+
+    /** Restore or permanently delete the ticked items of one type ("restore:page", "purge:page"). */
+    public function bulk(): Response
+    {
+        [$verb, $type] = array_pad(explode(':', $this->request->str('action'), 2), 2, '');
+        $ids = $this->bulkIds();
+        if (!$ids || !in_array($verb, ['restore', 'purge'], true)) {
+            $this->flash('Select items and an action.', 'warning');
+            return $this->redirect('/admin/trash');
+        }
+        [$table, $label, $perm, , $scoped] = $this->type($type);
+        $this->authorize($perm);
+        [$in, $params] = DB::in($ids);
+        $done = 0;
+        $kept = [];
+        foreach (DB::all("SELECT * FROM `$table` WHERE id IN ($in) AND deleted_at IS NOT NULL", $params) as $row) {
+            if ($scoped && !in_array((int) $row['country_id'], Countries::accessibleIds(), true)) {
+                continue;
+            }
+            if ($verb === 'restore') {
+                $this->restoreRow($type, $row);
+            } elseif (!$this->purgeRow($type, $row)) {
+                $kept[] = '"' . $row[$label] . '" is still referenced';
+                continue;
+            }
+            $done++;
+        }
+        $this->flash($done . ' item(s) ' . ($verb === 'restore' ? 'restored as drafts' : 'deleted permanently') . '.' . ($kept ? ' Kept: ' . implode('; ', array_slice($kept, 0, 5)) . '.' : ''), $kept && !$done ? 'warning' : 'success');
+        return $this->redirect('/admin/trash');
+    }
+
+    /** @return ?string the restored address, for types that have one */
+    private function restoreRow(string $type, array $row): ?string
+    {
+        [$table, $label, , $hasSlug, $scoped] = self::TYPES[$type];
+        $update = ['deleted_at' => null];
+        if ($hasSlug) {
+            $scope = $scoped ? ['country_id' => (int) $row['country_id']] : [];
+            $update['slug'] = Slugs::unique($table, Slugs::untrashed((string) $row['slug']), (int) $row['id'], $scope);
+        }
+        DB::update($table, $update, ['id' => $row['id']]);
+        Audit::record('restored', ucfirst($type), $row['id'], (string) $row[$label]);
+        return $update['slug'] ?? null;
+    }
+
+    private function purgeRow(string $type, array $row): bool
+    {
+        [$table, $label] = self::TYPES[$type];
+        try {
+            DB::delete($table, ['id' => $row['id']]);
+        } catch (\PDOException) {
+            return false;
+        }
+        Audit::record('purged', ucfirst($type), $row['id'], (string) $row[$label]);
+        return true;
     }
 
     /** @return array{0:string,1:string,2:string,3:bool,4:bool} */

@@ -228,6 +228,7 @@ Error details are never shown on a live site. **Keep a copy of the encryption ke
 | Multi-country markets (`/`, `/ae`, …) with hreflang | Admin → Countries; `Countries::resolve`; alternates in `<head>` |
 | Page builder (25 block types) with a design panel per section (spacing, background, colours, per-breakpoint) | Admin → Pages → Sections; `app/Cms/Blocks.php`, `Design.php`, `views/blocks/*` |
 | Visual drag-and-drop builder for pages and product pages, with product templates | Edit with Builder; `app/Builder/*`, `public/assets/js/builder*.js` — see above |
+| — | **Bulk actions** on every list: tick rows (select all, Shift-click a range) and apply one action — pages/products/articles: publish (pages: builder drafts go live too), draft, archive, recycle bin; leads and customers: status, owner; forms, popups, redirects: on/off, delete; media: move to folder, delete (files in use are kept unless you choose otherwise); recycle bin: restore or delete forever; builder templates: delete. Each action checks the same permission as doing it one by one, and the live homepage is never taken offline in bulk. `Form::bulkBar()`, `bulk()` in each controller |
 | Page categories, scheduled publishing, preview, duplicate, copy to another market | Admin → Pages |
 | Cities + City Page Generator | Admin → Cities |
 | Products with per-market pricing, categories, brands, comparison tables | Admin → Products |

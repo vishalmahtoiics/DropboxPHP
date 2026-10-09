@@ -446,6 +446,41 @@
     $$('input[type=checkbox][name="' + all.dataset.checkAll + '"]').forEach((c) => { c.checked = all.checked; });
   }));
 
+  // --- bulk bars: tick rows, choose an action, apply -------------------------------------------
+  $$('[data-bulk-form]').forEach((form) => {
+    const items = () => $$('input[data-bulk-item][form="' + form.id + '"]');
+    const all = $('[data-bulk-all="' + form.id + '"]');
+    const count = $('[data-bulk-count]', form);
+    const apply = $('[data-bulk-apply]', form);
+    const action = $('select[name="action"]', form);
+    const noun = form.dataset.noun || 'items';
+    let last = null;
+    const sync = () => {
+      const list = items();
+      const n = list.filter((c) => c.checked).length;
+      count.textContent = n ? n + ' of ' + list.length + ' selected' : 'Select ' + noun + ' to act on several at once';
+      apply.disabled = !n || !action.value;
+      form.classList.toggle('has-selection', n > 0);
+      if (all) { all.checked = n > 0 && n === list.length; all.indeterminate = n > 0 && n < list.length; }
+      const label = action.selectedOptions[0] ? action.selectedOptions[0].textContent : '';
+      form.dataset.confirm = n ? label + ': ' + n + ' ' + (n === 1 ? noun.replace(/s$/, '') : noun) + '. Continue?' : '';
+    };
+    if (all) all.addEventListener('change', () => { items().forEach((c) => { c.checked = all.checked; }); sync(); });
+    items().forEach((c) => c.addEventListener('click', (e) => {
+      // Shift-click ticks (or clears) every row between this one and the last one clicked.
+      if (e.shiftKey && last && last !== c) {
+        const list = items();
+        const [a, b] = [list.indexOf(last), list.indexOf(c)].sort((x, y) => x - y);
+        list.slice(a, b + 1).forEach((x) => { x.checked = c.checked; });
+      }
+      last = c;
+      sync();
+    }));
+    action.addEventListener('change', sync);
+    form.addEventListener('submit', (e) => { if (!items().some((c) => c.checked) || !action.value) e.preventDefault(); }, true);
+    sync();
+  });
+
   // --- preview device switch --------------------------------------------------------------------
   $$('[data-device-switch]').forEach((sw) => {
     const frame = document.getElementById(sw.dataset.deviceSwitch);
