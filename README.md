@@ -137,6 +137,7 @@ Pages and product pages can be designed visually, in the style of Elementor:
   - New pages are created as **drafts** at the addresses in the package. A page that already exists keeps its live version and gets the import as its builder draft, or is skipped.
   - Images go into the Media library (a folder named after the package) through the normal upload checks; the pages point at their new addresses.
   - Forms are created when their key is free; the header and footer arrive as inactive templates; menus are replaced only when you tick the option; redirects are added unless they already exist.
+  - **Replace everything** (a toggle at the top) makes the package the live site in one go: pages at the same address are overwritten and published (older versions stay in the builder history), new pages are published, forms with the same key are rebuilt, templates with the same name are overwritten and the header and footer become active, and the menus are replaced. It also needs *Publish pages* and *Manage navigation*.
   - Each part needs its own permission (pages and media to import at all; forms, navigation, SEO and code for those parts). The package format is described in `App\Services\SiteImport`.
 - **Changing addresses:**
   - The builder's ⚙ **settings** dialog changes the page or product title, its address (URL), SEO title and description, and whether the page shows the header and footer.

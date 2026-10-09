@@ -1,10 +1,13 @@
 <?php
-/** @var array $report */
-$labels = ['created' => ['green', 'New draft'], 'draft' => ['orange', 'Builder draft'], 'skipped' => ['gray', 'Skipped']];
+/** @var array $report @var bool $replace */
+$labels = ['created' => ['green', 'New draft'], 'published' => ['green', 'New, published'], 'replaced' => ['blue', 'Replaced, published'], 'draft' => ['orange', 'Builder draft'], 'skipped' => ['gray', 'Skipped']];
 $counts = array_count_values(array_column($report['pages'], 'action'));
 ?>
-<?= App\Core\View::partial('admin/partials/page-head', ['heading' => 'Site imported', 'sub' => sprintf('%d new pages, %d existing pages with a new draft, %d skipped · %d images · %d redirects.',
-    $counts['created'] ?? 0, $counts['draft'] ?? 0, $counts['skipped'] ?? 0, $report['media'], $report['redirects'])]) ?>
+<?= App\Core\View::partial('admin/partials/page-head', ['heading' => 'Site imported', 'sub' => !empty($replace)
+    ? sprintf('Replaced the live site: %d new pages and %d replaced pages published, %d skipped · %d images · %d redirects.',
+        $counts['published'] ?? 0, $counts['replaced'] ?? 0, $counts['skipped'] ?? 0, $report['media'], $report['redirects'])
+    : sprintf('%d new pages, %d existing pages with a new draft, %d skipped · %d images · %d redirects.',
+        $counts['created'] ?? 0, $counts['draft'] ?? 0, $counts['skipped'] ?? 0, $report['media'], $report['redirects'])]) ?>
 <?php if ($report['warnings']): ?>
     <div class="card mb-2"><div class="card-head"><h2>Notes</h2></div><div class="card-body"><ul class="small">
         <?php foreach (array_slice($report['warnings'], 0, 100) as $w): ?><li><?= e($w) ?></li><?php endforeach; ?>
@@ -35,12 +38,12 @@ $counts = array_count_values(array_column($report['pages'], 'action'));
 <div class="grid grid-3">
     <div class="card"><div class="card-head"><h2>Templates</h2></div><div class="card-body small">
         <?php if (!$report['templates']): ?><p class="muted">None.</p><?php endif; ?>
-        <?php foreach ($report['templates'] as $t): ?><p><a href="/admin/builder/template/<?= (int) $t['id'] ?>"><?= e($t['name']) ?></a> <span class="muted">(<?= e($t['kind']) ?>)</span></p><?php endforeach; ?>
-        <?php if ($report['templates']): ?><p><a href="/admin/builder/templates">Make them active in Builder templates →</a></p><?php endif; ?>
+        <?php foreach ($report['templates'] as $t): ?><p><a href="/admin/builder/template/<?= (int) $t['id'] ?>"><?= e($t['name']) ?></a> <span class="muted">(<?= e($t['kind']) ?><?= ($t['action'] ?? '') === 'replaced' ? ', replaced' : '' ?><?= !empty($t['active']) ? ', now active' : '' ?>)</span></p><?php endforeach; ?>
+        <?php if ($report['templates'] && empty($replace)): ?><p><a href="/admin/builder/templates">Make them active in Builder templates →</a></p><?php endif; ?>
     </div></div>
     <div class="card"><div class="card-head"><h2>Forms</h2></div><div class="card-body small">
         <?php if (!$report['forms']): ?><p class="muted">None.</p><?php endif; ?>
-        <?php foreach ($report['forms'] as $f): ?><p><?= e($f['name']) ?> <span class="muted">(<?= $f['action'] === 'created' ? 'created' : 'already existed, kept' ?>)</span></p><?php endforeach; ?>
+        <?php foreach ($report['forms'] as $f): ?><p><?= e($f['name']) ?> <span class="muted">(<?= ['created' => 'created', 'replaced' => 'replaced'][$f['action']] ?? 'already existed, kept' ?>)</span></p><?php endforeach; ?>
     </div></div>
     <div class="card"><div class="card-head"><h2>Menus</h2></div><div class="card-body small">
         <?php if (!$report['menus']): ?><p class="muted">Not changed.</p><?php else: ?><p>Replaced: <?= e(implode(', ', $report['menus'])) ?>. <a href="/admin/navigation">Review in Navigation →</a></p><?php endif; ?>

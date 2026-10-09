@@ -102,6 +102,59 @@ test('a site package becomes draft pages with their images, forms, templates, me
     assert_same('/imp-about', DB::value("SELECT destination FROM redirects WHERE source = '/old-about'"));
 });
 
+test('"Replace everything" overwrites existing pages, forms, header and menus and publishes', function () use ($package, $upload, $layout): void {
+    $india = (int) DB::value("SELECT id FROM countries WHERE code = 'IN'");
+    $old = DB::insert('pages', ['country_id' => $india, 'title' => 'Old title', 'slug' => 'rep-page', 'status' => 'DRAFT', 'editor' => 'builder',
+        'builder_layout' => Layout::encode(['version' => 1, 'elements' => [['type' => 'container', 'children' => [['type' => 'heading', 'settings' => ['title' => 'Old live heading']]]]]])]);
+    $formId = DB::insert('forms', ['name' => 'Old form', 'slug' => 'rep-form', 'is_active' => 1, 'submit_label' => 'Old', 'success_message' => 'Thanks']);
+    DB::insert('form_fields', ['form_id' => $formId, 'type' => 'TEXT', 'label' => 'Old field', 'name' => 'old_field', 'sort_order' => 1, 'is_enabled' => 1]);
+    $tplId = DB::insert('builder_templates', ['name' => 'Rep header', 'kind' => 'header', 'layout' => Layout::encode(['version' => 1, 'elements' => []])]);
+    $make = static fn (string $heading) => $package([
+        'format' => 'site-package', 'version' => 1, 'name' => 'rep.example',
+        'pages' => [['file' => 'pages/p.json', 'title' => 'New title', 'slug' => 'rep-page'], ['file' => 'pages/p.json', 'title' => 'Brand new', 'slug' => 'rep-new']],
+        'templates' => [['file' => 'templates/header.json', 'kind' => 'header', 'name' => 'Rep header']],
+        'forms' => [['slug' => 'rep-form', 'name' => 'New form', 'submit_label' => 'Send now', 'fields' => [['type' => 'EMAIL', 'label' => 'Email', 'name' => 'email', 'required' => true]]]],
+        'menus' => ['HEADER' => [['label' => 'Only item', 'url' => '/rep-page']]],
+    ], [
+        'pages/p.json' => $layout([['type' => 'container', 'children' => [['type' => 'heading', 'settings' => ['title' => $heading]]]]]),
+        'templates/header.json' => Transfer::export(['elements' => [['type' => 'container', 'children' => [['type' => 'heading', 'settings' => ['title' => 'Rep header text']]]]]], 'header', 'Rep header'),
+    ]);
+    sign_in_as('admin');
+    $zip = $make('Replaced heading');
+    $res = $upload($zip, ['replace' => '1', 'existing' => 'skip', 'templates' => '', 'menus' => '']);
+    unlink($zip);
+    assert_same(200, $res->status, substr($res->body, 0, 300));
+    assert_contains('Replaced the live site', $res->body);
+
+    $page = DB::first('SELECT * FROM pages WHERE id = ?', [$old]);
+    assert_same('PUBLISHED', $page['status'], 'replaced pages go live');
+    assert_same('New title', $page['title']);
+    assert_same(null, $page['builder_draft']);
+    $live = dispatch(fake_request('GET', '/rep-page'))->body;
+    assert_contains('Replaced heading', $live);
+    assert_not_contains('Old live heading', $live);
+    assert_same('PUBLISHED', DB::value("SELECT status FROM pages WHERE country_id = ? AND slug = 'rep-new'", [$india]), 'new pages are published too');
+
+    $form = DB::first('SELECT * FROM forms WHERE id = ?', [$formId]);
+    assert_same(['New form', 'Send now'], [$form['name'], $form['submit_label']], 'the form with the same key is replaced');
+    assert_same(['email'], DB::column('SELECT name FROM form_fields WHERE form_id = ?', [$formId]));
+
+    assert_same(1, (int) DB::value("SELECT COUNT(*) FROM builder_templates WHERE name = 'Rep header'"), 'the template of the same name is overwritten, not duplicated');
+    assert_contains('Rep header text', (string) DB::value('SELECT layout FROM builder_templates WHERE id = ?', [$tplId]));
+    assert_same($tplId, (int) DB::value("SELECT id FROM builder_templates WHERE kind = 'header' AND is_default = 1"), 'and made the active header');
+
+    $nav = (int) DB::value("SELECT id FROM navigations WHERE country_id = ? AND location = 'HEADER'", [$india]);
+    assert_same(['Only item'], DB::column('SELECT label FROM navigation_items WHERE navigation_id = ?', [$nav]), 'menus are replaced');
+
+    // Importing again replaces again; the earlier version stays in the history.
+    $zip = $make('Second version');
+    $upload($zip, ['replace' => '1']);
+    unlink($zip);
+    assert_contains('Second version', dispatch(fake_request('GET', '/rep-page'))->body);
+    assert_true((int) DB::value("SELECT COUNT(*) FROM builder_revisions WHERE owner_type = 'page' AND owner_id = ?", [$old]) >= 2);
+    DB::query("UPDATE builder_templates SET is_default = 0 WHERE id = ?", [$tplId]);
+});
+
 test('site import is hidden from the menu, needs a signed-in administrator and a real package', function () use ($package, $upload): void {
     App\Core\Session::useMemory();
     App\Core\Auth::reset();
