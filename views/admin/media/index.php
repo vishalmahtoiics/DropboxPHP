@@ -17,7 +17,7 @@ $size = static fn (int $b) => $b > 1048576 ? round($b / 1048576, 1) . ' MB' : ma
     </div>
 </form>
 <?php endif; ?>
-<div class="builder" style="grid-template-columns:220px minmax(0,1fr) 320px">
+<div class="builder builder-media">
     <aside class="card"><div class="card-body">
         <a class="nav-link<?= !$folder ? ' active' : '' ?>" href="/admin/media"><?= Icons::svg('folder', 'icon', 16) ?> All files</a>
         <?php foreach ($folders as $f): ?>
