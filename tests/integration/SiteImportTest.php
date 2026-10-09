@@ -102,11 +102,17 @@ test('a site package becomes draft pages with their images, forms, templates, me
     assert_same('/imp-about', DB::value("SELECT destination FROM redirects WHERE source = '/old-about'"));
 });
 
-test('site import needs page and media permissions and a real package', function () use ($package, $upload): void {
+test('site import is hidden from the menu, needs a signed-in administrator and a real package', function () use ($package, $upload): void {
+    App\Core\Session::useMemory();
+    App\Core\Auth::reset();
+    assert_same(404, dispatch(fake_request('GET', '/admin/site-import'))->status, 'signed out: not found');
     sign_in_as('sales');
     assert_same(403, dispatch(fake_request('GET', '/admin/site-import'))->status);
+    sign_in_as('content-marketing');
+    assert_same(403, dispatch(fake_request('GET', '/admin/site-import'))->status, 'editing pages is not enough');
     sign_in_as('admin');
     assert_same(200, dispatch(fake_request('GET', '/admin/site-import'))->status);
+    assert_not_contains('href="/admin/site-import"', dispatch(fake_request('GET', '/admin'))->body, 'not in the admin menu');
     $zip = $package(['format' => 'something-else'], []);
     $res = $upload($zip);
     unlink($zip);
