@@ -29,6 +29,12 @@ use ZipArchive;
  *                    "redirects":[{"from":"/old","to":"/new"}]}
  *   pages/*.json, templates/*.json   builder layout files (App\Builder\Transfer)
  *   media/…                          images; layouts refer to them as "pkg:media/…"
+ *   (manifest) "media_sources":      optional {"media/2018/11/a.jpg": ["/wp-content/uploads/2018/11/a.jpg", …]}:
+ *                                    the image's addresses on the old site, redirected to its new one
+ *
+ * Images under a year/month folder keep that folder and their name (media/2018/11/A.jpg →
+ * /media/2018/11/a.jpg) when the address is free, so a site's image addresses are predictable;
+ * importing the same file again reuses it instead of storing a copy.
  *
  * Everything is untrusted: the zip is read entry by entry with size limits
  * (nothing is extracted to disk under its own name), images go through the
@@ -55,7 +61,7 @@ final class SiteImport
     /** @var array<string, string> package media path => site URL */
     private array $media = [];
     /** @var array{pages: list<array>, templates: list<array>, forms: list<array>, menus: list<string>, redirects: int, media: int, warnings: list<string>} */
-    private array $report = ['pages' => [], 'templates' => [], 'forms' => [], 'menus' => [], 'redirects' => 0, 'media' => 0, 'warnings' => []];
+    private array $report = ['pages' => [], 'templates' => [], 'forms' => [], 'menus' => [], 'redirects' => 0, 'media' => 0, 'images' => [], 'warnings' => []];
 
     /**
      * @param array{country_id:int, existing:string, templates:bool, menus:bool, redirects:bool, replace?:bool} $options
@@ -99,7 +105,7 @@ final class SiteImport
                 }
             });
             if ($options['redirects']) {
-                $this->importRedirects($manifest['redirects'] ?? []);
+                $this->importRedirects(array_merge((array) ($manifest['redirects'] ?? []), $this->mediaRedirects((array) ($manifest['media_sources'] ?? []))), $options['replace']);
             }
         } finally {
             $this->zip->close();
@@ -177,7 +183,7 @@ final class SiteImport
         if (!$paths) {
             return;
         }
-        $folder = DB::insert('media_folders', ['name' => mb_substr('Imported: ' . Sanitizer::line((string) ($manifest['name'] ?? 'site'), 100), 0, 120)]);
+        $folder = null;
         $max = (int) config('app.max_upload_bytes');
         foreach ($paths as $path) {
             $data = $this->entry($path, $max);
@@ -185,18 +191,62 @@ final class SiteImport
                 $this->report['warnings'][] = 'Skipped ' . $path . ': larger than the upload limit.';
                 continue;
             }
+            $key = Storage::keepKey($path);
+            $same = $key !== null ? $this->sameFile($key, $data) : null;
+            if ($same !== null) {
+                // Imported before: keep using it.
+                $this->media[$path] = $same;
+                $this->report['images'][] = ['path' => $path, 'url' => $same, 'reused' => true];
+                continue;
+            }
+            $folder ??= DB::insert('media_folders', ['name' => mb_substr('Imported: ' . Sanitizer::line((string) ($manifest['name'] ?? 'site'), 100), 0, 120)]);
             $tmp = tempnam(sys_get_temp_dir(), 'imp');
             try {
                 file_put_contents($tmp, $data);
-                $row = Uploads::store(['name' => basename($path), 'tmp_name' => $tmp, 'size' => strlen($data), 'error' => UPLOAD_ERR_OK], $userId, $folder);
+                $row = Uploads::store(['name' => basename($path), 'tmp_name' => $tmp, 'size' => strlen($data), 'error' => UPLOAD_ERR_OK], $userId, $folder, $key);
                 $this->media[$path] = (string) $row['url'];
                 $this->report['media']++;
+                $this->report['images'][] = ['path' => $path, 'url' => (string) $row['url'], 'reused' => false];
             } catch (ValidationException $e) {
                 $this->report['warnings'][] = 'Skipped ' . $path . ': ' . $e->getMessage();
             } finally {
                 @unlink($tmp);
             }
         }
+    }
+
+    /** The address of a stored file at $key with exactly these bytes, or null. */
+    private function sameFile(string $key, string $data): ?string
+    {
+        $row = DB::first('SELECT url, provider, size FROM media WHERE storage_key = ?', [$key]);
+        if (!$row || (int) $row['size'] !== strlen($data)) {
+            return null;
+        }
+        if ($row['provider'] === 'local') {
+            $file = Storage::localPath($key);
+            if ($file === null || hash_file('sha256', $file) !== hash('sha256', $data)) {
+                return null;
+            }
+        }
+        return (string) $row['url'];
+    }
+
+    /** Redirects from an image's old-site addresses to its new one. @return list<array{from:string,to:string}> */
+    private function mediaRedirects(array $sources): array
+    {
+        $out = [];
+        foreach (array_slice($sources, 0, 5000, true) as $path => $olds) {
+            $to = $this->media[(string) $path] ?? null;
+            if ($to === null) {
+                continue;
+            }
+            foreach (array_slice((array) $olds, 0, 20) as $old) {
+                if (is_string($old) && str_starts_with($old, '/') && Redirects::normalise($old) !== Redirects::normalise($to)) {
+                    $out[] = ['from' => $old, 'to' => $to];
+                }
+            }
+        }
+        return $out;
     }
 
     /** Replace "pkg:media/…" with the uploaded file's address, everywhere in a decoded layout. */
@@ -496,18 +546,19 @@ final class SiteImport
         }
     }
 
-    private function importRedirects(array $redirects): void
+    private function importRedirects(array $redirects, bool $replace): void
     {
         if (!Auth::can('seo.manage')) {
             $this->report['warnings'][] = 'Redirects were not added: your role cannot manage redirects.';
             return;
         }
-        foreach (array_slice($redirects, 0, 2000) as $r) {
+        foreach (array_slice($redirects, 0, 10000) as $r) {
             if (!is_array($r) || !is_string($r['from'] ?? null) || !is_string($r['to'] ?? null) || !str_starts_with($r['from'], '/')) {
                 continue;
             }
             try {
-                Redirects::save(['source' => $r['from'], 'destination' => $r['to'], 'is_active' => 1, 'note' => 'Site import']);
+                $existing = $replace ? DB::value('SELECT id FROM redirects WHERE source_hash = ?', [hash('sha256', Redirects::normalise($r['from']))]) : null;
+                Redirects::save(['source' => $r['from'], 'destination' => $r['to'], 'is_active' => 1, 'note' => 'Site import'], $existing ? (int) $existing : null);
                 $this->report['redirects']++;
             } catch (ValidationException) {
                 // already redirected, or it would point to itself

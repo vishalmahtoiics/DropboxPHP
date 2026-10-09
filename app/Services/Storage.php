@@ -34,6 +34,22 @@ final class Storage
         return date('Y/m') . '/' . $stem . '-' . bin2hex(random_bytes(6)) . '.' . strtolower($extension);
     }
 
+    /**
+     * A readable key that keeps a file's original folder and name, for imports that should
+     * keep predictable addresses ("2018/11/Logo.png" → "2018/11/logo.png"). Null when the
+     * path has no year/month folder.
+     */
+    public static function keepKey(string $path): ?string
+    {
+        if (!preg_match('#(?:^|/)(\d{4})/(\d{2})/([^/]+)$#', $path, $m)) {
+            return null;
+        }
+        $ext = strtolower(pathinfo($m[3], PATHINFO_EXTENSION));
+        $stem = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower(pathinfo($m[3], PATHINFO_FILENAME))) ?? '', '-');
+        $key = $m[1] . '/' . $m[2] . '/' . mb_substr($stem !== '' ? $stem : 'file', 0, 100) . '.' . $ext;
+        return preg_match(self::KEY_PATTERN, $key) ? $key : null;
+    }
+
     /** Store a file; returns [provider, public URL]. @return array{0:string,1:string} */
     public static function put(string $sourcePath, string $key, string $mime): array
     {

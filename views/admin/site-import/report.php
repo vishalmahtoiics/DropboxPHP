@@ -35,6 +35,19 @@ $counts = array_count_values(array_column($report['pages'], 'action'));
         </tbody>
     </table>
 </div>
+<?php if (!empty($report['images'])): ?>
+    <details class="card mb-2">
+        <summary class="card-head"><h2>Image addresses (<?= count($report['images']) ?>)</h2></summary>
+        <table class="table">
+            <thead><tr><th>In the package</th><th>Address on this site</th></tr></thead>
+            <tbody>
+            <?php foreach ($report['images'] as $img): ?>
+                <tr><td class="small"><?= e($img['path']) ?></td><td class="small"><a href="<?= e($img['url']) ?>" target="_blank" rel="noopener"><?= e($img['url']) ?></a><?= $img['reused'] ? ' <span class="muted">(already here, reused)</span>' : '' ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </details>
+<?php endif; ?>
 <div class="grid grid-3">
     <div class="card"><div class="card-head"><h2>Templates</h2></div><div class="card-body small">
         <?php if (!$report['templates']): ?><p class="muted">None.</p><?php endif; ?>
