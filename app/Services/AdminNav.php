@@ -79,6 +79,23 @@ final class AdminNav
         return $out;
     }
 
+    /**
+     * The one menu address to highlight for $path: the longest that matches, so
+     * /admin/products/categories lights up "Categories & brands" and not "Products" too.
+     */
+    public static function activeHref(string $path): ?string
+    {
+        $best = null;
+        foreach (self::visible() as $group) {
+            foreach ($group['items'] as $item) {
+                if (self::isActive($item['href'], $path) && strlen($item['href']) > strlen((string) $best)) {
+                    $best = $item['href'];
+                }
+            }
+        }
+        return $best;
+    }
+
     public static function isActive(string $href, string $path): bool
     {
         if ($href === '/admin') {
