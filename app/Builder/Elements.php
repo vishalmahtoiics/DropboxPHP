@@ -313,6 +313,7 @@ final class Elements
                         C::c('choose', 'layout', 'Layout', 'vertical', ['choices' => ['vertical' => 'Default', 'inline' => 'Inline']]),
                     ]]],
                     'style' => [['label' => 'List', 'controls' => array_merge([
+                        C::c('choose', 'align', 'Alignment', '', ['responsive' => true, 'choices' => ['' => 'Default', 'flex-start' => 'Left', 'center' => 'Centre', 'flex-end' => 'Right'], 'css' => ['{{W}} .bx-iconlist' => 'align-items:{{V}};justify-content:{{V}}']]),
                         $size('space', 'Space between', '{{W}} .bx-iconlist', 'gap', 'px', 100),
                         C::c('color', 'icon_color', 'Icon colour', '', ['css' => ['{{W}} .bx-iconlist .icon' => 'color:{{V}}']]),
                         $size('icon_size', 'Icon size', '{{W}} .bx-iconlist svg', 'width', 'px', 100),
@@ -476,6 +477,7 @@ final class Elements
                         C::c('color', 'color', 'Icon colour', '', ['css' => ['{{W}} .bx-social a' => 'color:{{V}}']]),
                         C::c('color', 'bg', 'Background', '', ['css' => ['{{W}} .bx-social a' => 'background:{{V}}']]),
                         $size('icon_size', 'Size', '{{W}} .bx-social svg', 'width', 'px', 100),
+                        C::c('slider', 'box_size', 'Circle size', ['size' => '', 'unit' => 'px'], ['units' => ['px', 'em'], 'min' => 12, 'max' => 120, 'css' => ['{{W}} .bx-social a' => 'width:{{V}};height:{{V}}']]),
                     ]]],
                 ],
             ],
@@ -533,7 +535,7 @@ final class Elements
                         C::c('select', 'menu', 'Menu', 'HEADER', ['choices' => ['HEADER' => 'Header menu', 'FOOTER' => 'Footer menu', 'FOOTER_SECONDARY' => 'Footer — second menu', 'LEGAL' => 'Legal links', 'MOBILE' => 'Mobile menu'], 'help' => 'Menus are edited in Admin → Navigation, for each market.']),
                         C::c('choose', 'layout', 'Layout', 'horizontal', ['choices' => ['horizontal' => 'Horizontal', 'vertical' => 'Vertical', 'columns' => 'Columns'], 'help' => 'Columns: each top-level link becomes a column heading with its sub-links below — for footers.']),
                         C::c('select', 'collapse', 'Turn into a menu button on', 'mobile', ['choices' => ['mobile' => 'Mobile', 'tablet' => 'Tablet and mobile', 'none' => 'Never']]),
-                        C::c('text', 'toggle_label', 'Menu button label', 'Menu', ['max' => 40]),
+                        C::c('text', 'toggle_label', 'Menu button label', 'Menu', ['max' => 40, 'help' => 'Leave empty to show only the ☰ icon.']),
                         C::c('switch', 'submenus', 'Show sub-menus', true),
                     ]]],
                     'style' => [
