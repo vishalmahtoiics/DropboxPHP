@@ -197,6 +197,58 @@ final class MediaController extends AdminController
         return $this->bulkDone('/admin/media', $done, $done === 1 ? 'file' : 'files', $skipped);
     }
 
+    /** Files nothing on the site uses (optionally in one folder), to review before removing them. */
+    public function unused(): Response
+    {
+        $this->authorize('media.delete');
+        $folder = $this->request->int('folder') ?: null;
+        $files = self::unusedFiles($folder);
+        return $this->screen('media/unused', [
+            'title' => 'Unused files',
+            'files' => $files,
+            'folder' => $folder,
+            'folders' => DB::all('SELECT f.id, f.name, (SELECT COUNT(*) FROM media m WHERE m.folder_id = f.id) AS n FROM media_folders f ORDER BY f.name, f.id'),
+            'bytes' => array_sum(array_map(static fn ($m) => (int) $m['size'], $files)),
+        ]);
+    }
+
+    /** Remove every unused file (in the chosen folder, or everywhere), and optionally the folders left empty. */
+    public function cleanUnused(): Response
+    {
+        $this->authorize('media.delete');
+        $folder = $this->request->int('folder') ?: null;
+        $done = 0;
+        $bytes = 0;
+        foreach (self::unusedFiles($folder) as $m) {
+            DB::delete('media', ['id' => $m['id']]);
+            Storage::delete((string) $m['provider'], (string) $m['storage_key']);
+            $done++;
+            $bytes += (int) $m['size'];
+        }
+        $folders = 0;
+        if ($this->request->bool('empty_folders')) {
+            $folders = DB::query('DELETE FROM media_folders WHERE NOT EXISTS (SELECT 1 FROM media m WHERE m.folder_id = media_folders.id)')->rowCount();
+        }
+        Audit::record('deleted', 'Media', null, sprintf('Removed %d unused files (%s) and %d empty folders', $done, self::mb($bytes), $folders));
+        $this->flash(sprintf('Removed %d unused %s (%s freed)%s.', $done, $done === 1 ? 'file' : 'files', self::mb($bytes), $folders ? ' and ' . $folders . ' empty ' . ($folders === 1 ? 'folder' : 'folders') : ''));
+        return $this->redirect('/admin/media');
+    }
+
+    /** @return list<array<string,mixed>> */
+    private static function unusedFiles(?int $folder): array
+    {
+        @set_time_limit(300);
+        $rows = $folder !== null
+            ? DB::all('SELECT * FROM media WHERE folder_id = ? ORDER BY id', [$folder])
+            : DB::all('SELECT * FROM media ORDER BY id');
+        return array_values(array_filter($rows, static fn ($m) => !self::usage($m)));
+    }
+
+    private static function mb(int $bytes): string
+    {
+        return $bytes > 1048576 ? round($bytes / 1048576, 1) . ' MB' : max(0, round($bytes / 1024)) . ' KB';
+    }
+
     public function createFolder(): Response
     {
         $this->authorize('media.upload');
@@ -239,6 +291,23 @@ final class MediaController extends AdminController
         }
         foreach (DB::all('SELECT title FROM blog_posts WHERE (featured_image_id = ? OR og_image_id = ? OR content LIKE ?) AND deleted_at IS NULL', [$id, $id, $like]) as $r) {
             $out[] = 'Article: ' . $r['title'];
+        }
+        foreach (DB::all('SELECT title FROM pages WHERE og_image_id = ? AND deleted_at IS NULL', [$id]) as $r) {
+            $out[] = 'Page share image: ' . $r['title'];
+        }
+        foreach ([
+            ['product_categories', 'Product category', 'image_id = ? OR description LIKE ?'],
+            ['brands', 'Brand', 'logo_id = ? OR description LIKE ?'],
+            ['page_categories', 'Page category', '0 = ? OR description LIKE ?'],
+            ['blog_categories', 'Blog category', 'image_id = ? OR description LIKE ?'],
+            ['lead_magnets', 'Lead magnet', 'image_id = ? OR file_id = ? OR description LIKE ? OR thank_you_message LIKE ?'],
+            ['popups', 'Popup', 'image_id = ? OR body LIKE ?'],
+        ] as [$table, $label, $where]) {
+            $params = substr_count($where, '= ?') === 2 ? [$id, $id, $like, $like] : [$id, $like];
+            $col = $table === 'lead_magnets' ? 'title' : 'name';
+            foreach (DB::all("SELECT $col AS name FROM $table WHERE $where", $params) as $r) {
+                $out[] = $label . ': ' . $r['name'];
+            }
         }
         if (DB::value('SELECT 1 FROM settings WHERE data LIKE ?', [$like])) {
             $out[] = 'Website settings (logo, favicon or share image)';

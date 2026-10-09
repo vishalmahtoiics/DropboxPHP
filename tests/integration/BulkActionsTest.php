@@ -120,6 +120,37 @@ test('media moves to folders in bulk and deleting leaves files that pages use', 
     assert_same(null, DB::value('SELECT id FROM media WHERE id = ?', [$ids[0]]));
 });
 
+test('unused files can be reviewed and removed in one go, with the folders left empty', function () use ($page): void {
+    sign_in_as('admin');
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+    $folder = DB::insert('media_folders', ['name' => 'Clean folder']);
+    $emptyFolder = DB::insert('media_folders', ['name' => 'Already empty']);
+    $files = [];
+    foreach (['page', 'brand', 'spare'] as $n) {
+        $tmp = tempnam(sys_get_temp_dir(), 'cl');
+        file_put_contents($tmp, $png);
+        $files[$n] = App\Services\Uploads::store(['name' => "clean-$n.png", 'tmp_name' => $tmp, 'size' => strlen($png), 'error' => 0], null, $n === 'spare' ? $folder : null);
+        @unlink($tmp);
+    }
+    $page('clean-uses-image', 'DRAFT', ['editor' => 'builder', 'builder_draft' => Layout::encode(Layout::normalize(['elements' => [['type' => 'container', 'children' => [['type' => 'image', 'settings' => ['src' => $files['page']['url']]]]]]]))]);
+    DB::insert('brands', ['name' => 'Clean brand', 'slug' => 'clean-brand', 'logo_id' => $files['brand']['id']]);
+
+    $res = dispatch(fake_request('GET', '/admin/media/unused'));
+    assert_same(200, $res->status);
+    assert_contains('clean-spare.png', $res->body);
+    assert_not_contains('clean-page.png', $res->body, 'a file a page draft uses is not listed');
+    assert_not_contains('clean-brand.png', $res->body, 'a brand logo is not listed');
+
+    $file = App\Services\Storage::localPath((string) $files['spare']['storage_key']);
+    assert_true($file !== null);
+    dispatch(fake_request('POST', '/admin/media/unused', ['empty_folders' => '1']));
+    assert_same(null, DB::value('SELECT id FROM media WHERE id = ?', [$files['spare']['id']]), 'the unused file is removed');
+    assert_true(!is_file($file), 'with its stored file');
+    assert_true(DB::value('SELECT id FROM media WHERE id = ?', [$files['page']['id']]) !== null);
+    assert_true(DB::value('SELECT id FROM media WHERE id = ?', [$files['brand']['id']]) !== null);
+    assert_same(null, DB::value('SELECT id FROM media_folders WHERE id IN (?, ?)', [$folder, $emptyFolder]), 'folders left empty are removed');
+});
+
 test('the recycle bin restores and deletes in bulk; templates delete in bulk', function () use ($page): void {
     sign_in_as('admin');
     $a = $page('bulk-trash-a');

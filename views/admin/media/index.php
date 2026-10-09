@@ -5,7 +5,8 @@ use App\Http\Form;
 $qs = static fn (array $extra) => '?' . http_build_query(array_filter(array_merge(['folder' => $folder ?: null, 'kind' => $kind ?: null, 'q' => $q ?: null], $extra)));
 $size = static fn (int $b) => $b > 1048576 ? round($b / 1048576, 1) . ' MB' : max(1, round($b / 1024)) . ' KB';
 ?>
-<?= App\Core\View::partial('admin/partials/page-head', ['heading' => 'Media library', 'sub' => number_format($total) . ' files · ' . $size($storageBytes) . ' · stored with the "' . App\Services\Storage::driver() . '" driver']) ?>
+<?= App\Core\View::partial('admin/partials/page-head', ['heading' => 'Media library', 'sub' => number_format($total) . ' files · ' . $size($storageBytes) . ' · stored with the "' . App\Services\Storage::driver() . '" driver',
+    'actions' => can('media.delete') ? '<a class="btn btn-secondary" href="/admin/media/unused' . ($folder ? '?folder=' . (int) $folder : '') . '">' . Icons::svg('trash', 'icon', 16) . ' Clean up unused files</a>' : '']) ?>
 <?php if (can('media.upload')): ?>
 <form class="card mb-2" method="post" action="/admin/media/upload" enctype="multipart/form-data">
     <div class="card-body row">
@@ -21,8 +22,8 @@ $size = static fn (int $b) => $b > 1048576 ? round($b / 1048576, 1) . ' MB' : ma
     <aside class="card"><div class="card-body">
         <a class="nav-link<?= !$folder ? ' active' : '' ?>" href="/admin/media"><?= Icons::svg('folder', 'icon', 16) ?> All files</a>
         <?php foreach ($folders as $f): ?>
-            <div class="row-between"><a class="nav-link grow<?= $folder === (int) $f['id'] ? ' active' : '' ?>" href="?folder=<?= (int) $f['id'] ?>"><?= Icons::svg('folder', 'icon', 16) ?> <?= e($f['name']) ?> <span class="badge"><?= (int) $f['n'] ?></span></a>
-            <?php if (can('media.delete')): ?><?= Form::action('/admin/media/folders/' . $f['id'] . '/delete', '×', 'btn btn-ghost btn-xs', 'Delete this folder? Files stay in the library.') ?><?php endif; ?></div>
+            <div class="folder-row"><a class="nav-link folder-link<?= $folder === (int) $f['id'] ? ' active' : '' ?>" href="?folder=<?= (int) $f['id'] ?>" title="<?= e($f['name']) ?>"><?= Icons::svg('folder', 'icon', 16) ?><span class="folder-name"><?= e($f['name']) ?></span><span class="badge"><?= (int) $f['n'] ?></span></a>
+            <?php if (can('media.delete')): ?><?= Form::action('/admin/media/folders/' . $f['id'] . '/delete', '×', 'btn btn-ghost btn-xs folder-delete', 'Delete this folder? Files stay in the library.') ?><?php endif; ?></div>
         <?php endforeach; ?>
         <?php if (can('media.upload')): ?>
             <form method="post" action="/admin/media/folders" class="mt-2"><?= csrf_field() ?><div class="input-group"><input class="input input-sm" name="name" placeholder="New folder" required maxlength="120"><button class="btn btn-secondary btn-sm" type="submit">Add</button></div></form>
