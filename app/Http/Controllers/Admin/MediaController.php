@@ -153,6 +153,50 @@ final class MediaController extends AdminController
         return $this->redirect('/admin/media');
     }
 
+    /**
+     * The library's "with selected" actions: move to a folder, or delete.
+     * "delete" leaves files that pages still use; "delete-all" removes them too.
+     */
+    public function bulk(): Response
+    {
+        $action = $this->request->str('action');
+        $ids = $this->bulkIds();
+        $folder = str_starts_with($action, 'folder:') ? substr($action, 7) : null;
+        if (!$ids || ($folder === null && !in_array($action, ['delete', 'delete-all'], true))) {
+            $this->flash('Select files and an action.', 'warning');
+            return $this->back('/admin/media');
+        }
+        [$in, $params] = DB::in($ids);
+        $rows = DB::all("SELECT * FROM media WHERE id IN ($in)", $params);
+        $done = 0;
+        $skipped = [];
+        if ($folder !== null) {
+            $this->authorize('media.edit');
+            $target = $folder === 'none' ? null : (int) $folder;
+            if ($target !== null && !DB::value('SELECT id FROM media_folders WHERE id = ?', [$target])) {
+                $this->flash('That folder no longer exists.', 'warning');
+                return $this->back('/admin/media');
+            }
+            foreach ($rows as $m) {
+                DB::update('media', ['folder_id' => $target], ['id' => $m['id']]);
+                $done++;
+            }
+        } else {
+            $this->authorize('media.delete');
+            foreach ($rows as $m) {
+                if ($action === 'delete' && self::usage($m)) {
+                    $skipped[] = $m['filename'] . ' is in use';
+                    continue;
+                }
+                DB::delete('media', ['id' => $m['id']]);
+                Storage::delete((string) $m['provider'], (string) $m['storage_key']);
+                Audit::record('deleted', 'Media', $m['id'], $m['filename']);
+                $done++;
+            }
+        }
+        return $this->bulkDone('/admin/media', $done, $done === 1 ? 'file' : 'files', $skipped);
+    }
+
     public function createFolder(): Response
     {
         $this->authorize('media.upload');

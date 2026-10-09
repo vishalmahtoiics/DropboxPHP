@@ -96,6 +96,26 @@ final class PopupController extends AdminController
         ];
     }
 
+    /** The list's "with selected" actions: switch on, switch off or move to the recycle bin. */
+    public function bulk(): Response
+    {
+        $this->authorize('marketing.manage');
+        $action = $this->request->str('action');
+        $ids = $this->bulkIds();
+        if (!$ids || !in_array($action, ['activate', 'deactivate', 'delete'], true)) {
+            $this->flash('Select popups and an action.', 'warning');
+            return $this->back('/admin/popups');
+        }
+        [$in, $params] = DB::in($ids);
+        $done = 0;
+        foreach (DB::all("SELECT id, name FROM popups WHERE id IN ($in) AND deleted_at IS NULL", $params) as $p) {
+            DB::update('popups', $action === 'delete' ? ['deleted_at' => now(), 'is_active' => 0] : ['is_active' => $action === 'activate' ? 1 : 0], ['id' => $p['id']]);
+            Audit::record($action === 'delete' ? 'deleted' : 'updated', 'Popup', $p['id'], $p['name'] . ($action === 'delete' ? '' : ($action === 'activate' ? ' switched on' : ' switched off')));
+            $done++;
+        }
+        return $this->bulkDone('/admin/popups', $done, $done === 1 ? 'popup' : 'popups');
+    }
+
     public function destroy(string $id): Response
     {
         $this->authorize('marketing.manage');

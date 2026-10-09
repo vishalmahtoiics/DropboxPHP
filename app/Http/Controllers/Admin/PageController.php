@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Builder\Store;
+use App\Builder\Layout;
 use App\Cms\Blocks;
 use App\Core\Audit;
 use App\Core\Auth;
@@ -216,6 +218,54 @@ final class PageController extends AdminController
         Audit::record(strtolower($status === 'PUBLISHED' ? 'published' : 'status-changed'), 'Page', $page['id'], $page['title'] . ' → ' . $status);
         $this->flash($status === 'PUBLISHED' ? 'Page published.' : 'Page moved to ' . strtolower($status) . '.');
         return $this->back('/admin/pages');
+    }
+
+    /**
+     * The list's "with selected" actions. Publishing also makes a page's
+     * unpublished builder draft live, as Publish in the builder does.
+     */
+    public function bulk(): Response
+    {
+        $action = $this->request->str('action');
+        $ids = $this->bulkIds();
+        if (!$ids || !in_array($action, ['publish', 'draft', 'archive', 'delete'], true)) {
+            $this->flash('Select pages and an action.', 'warning');
+            return $this->back('/admin/pages');
+        }
+        $this->authorize($action === 'delete' ? 'pages.delete' : 'pages.publish');
+        [$in, $params] = DB::in($ids);
+        $pages = array_filter(DB::all("SELECT * FROM pages WHERE id IN ($in) AND deleted_at IS NULL", $params),
+            static fn ($p) => in_array((int) $p['country_id'], Countries::accessibleIds(), true));
+        $done = 0;
+        $skipped = [];
+        foreach ($pages as $page) {
+            if ($action === 'delete') {
+                if ($page['slug'] === '') {
+                    $skipped[] = '"' . $page['title'] . '" is the homepage';
+                    continue;
+                }
+                DB::update('pages', ['deleted_at' => now(), 'slug' => Slugs::trashed($page['slug'], (int) $page['id']), 'status' => 'DRAFT'], ['id' => $page['id']]);
+                Audit::record('deleted', 'Page', $page['id'], 'Moved "' . $page['title'] . '" to the recycle bin');
+            } else {
+                $status = ['publish' => 'PUBLISHED', 'draft' => 'DRAFT', 'archive' => 'ARCHIVED'][$action];
+                if ($status !== 'PUBLISHED' && $page['slug'] === '' && $page['status'] === 'PUBLISHED') {
+                    // "Select all" must not take the site's homepage offline; change it from its own screen.
+                    $skipped[] = '"' . $page['title'] . '" is the homepage and stays live';
+                    continue;
+                }
+                if ($status === 'PUBLISHED' && $page['builder_draft'] !== null) {
+                    Store::save('page', $page, Layout::decode((string) $page['builder_draft']), true);
+                }
+                DB::update('pages', [
+                    'status' => $status,
+                    'published_at' => $status === 'PUBLISHED' ? ($page['published_at'] && strtotime((string) $page['published_at']) <= time() ? $page['published_at'] : now()) : $page['published_at'],
+                    'updated_by_id' => $this->me['id'],
+                ], ['id' => $page['id']]);
+                Audit::record($status === 'PUBLISHED' ? 'published' : 'status-changed', 'Page', $page['id'], $page['title'] . ' → ' . $status);
+            }
+            $done++;
+        }
+        return $this->bulkDone('/admin/pages', $done, $done === 1 ? 'page' : 'pages', $skipped);
     }
 
     public function duplicate(string $id): Response

@@ -23,11 +23,22 @@ $actions = can('pages.create') ? '<a class="btn btn-primary" href="/admin/pages/
     <?php if (!$rows): ?>
         <div class="empty"><?= Icons::svg('file-text', 'icon', 32) ?><p>No pages match.</p></div>
     <?php else: ?>
+    <?php
+    $bulk = [];
+    if (can('pages.publish')) {
+        $bulk += ['publish' => 'Publish (and make builder drafts live)', 'draft' => 'Move to draft', 'archive' => 'Archive'];
+    }
+    if (can('pages.delete')) {
+        $bulk['delete'] = 'Move to recycle bin';
+    }
+    ?>
+    <?= Form::bulkBar('bulk-pages', '/admin/pages/bulk', $bulk, 'pages') ?>
     <div class="table-wrap"><table class="table">
-        <thead><tr><?= Form::sortTh('title', 'Title', $sort, $dir) ?><?= Form::sortTh('slug', 'Address', $sort, $dir) ?><?= Form::sortTh('status', 'Status', $sort, $dir) ?><th class="hide-sm">Sections</th><?= Form::sortTh('updated_at', 'Updated', $sort, $dir) ?><th></th></tr></thead>
+        <thead><tr><?php if ($bulk): ?><th class="check"><?= Form::bulkAll('bulk-pages') ?></th><?php endif; ?><?= Form::sortTh('title', 'Title', $sort, $dir) ?><?= Form::sortTh('slug', 'Address', $sort, $dir) ?><?= Form::sortTh('status', 'Status', $sort, $dir) ?><th class="hide-sm">Sections</th><?= Form::sortTh('updated_at', 'Updated', $sort, $dir) ?><th></th></tr></thead>
         <tbody>
         <?php foreach ($rows as $r): $path = Countries::href($adminCountry, '/' . $r['slug']); ?>
             <tr>
+                <?php if ($bulk): ?><td class="check"><?= Form::bulkCheck('bulk-pages', (int) $r['id'], $r['title']) ?></td><?php endif; ?>
                 <td><a class="row-title" href="/admin/pages/<?= (int) $r['id'] ?>"><?= e($r['title']) ?></a><?php if ($r['slug'] === ''): ?> <span class="badge blue">Homepage</span><?php endif; ?><?php if ($r['category_name']): ?><div class="small muted"><?= e($r['category_name']) ?></div><?php endif; ?></td>
                 <td class="small"><a href="<?= e($path) ?>" target="_blank" rel="noopener"><?= e($path) ?></a></td>
                 <td><?= Form::badge($r['status']) ?><?php if ((int) $r['no_index']): ?> <span class="badge">noindex</span><?php endif; ?></td>

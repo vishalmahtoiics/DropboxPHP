@@ -9,8 +9,9 @@ $e = $edit ?? [];
         <div class="card">
             <form class="toolbar" method="get"><input class="input search" type="search" name="q" value="<?= e($q) ?>" placeholder="Search paths"></form>
             <?php if (!$rows): ?><div class="empty"><p>No redirects yet.</p></div><?php else: ?>
-            <div class="table-wrap"><table class="table"><thead><tr><th>From</th><th>To</th><th>Type</th><th>Hits</th><th></th></tr></thead><tbody>
-                <?php foreach ($rows as $r): ?><tr<?= (int) $r['is_active'] ? '' : ' style="opacity:.55"' ?>><td><code><?= e($r['source']) ?></code><?php if ($r['origin'] === 'AUTOMATIC'): ?> <span class="badge">auto</span><?php endif; ?></td><td class="small" style="word-break:break-all"><?= e($r['destination']) ?></td><td><?= $r['type'] === 'PERMANENT' ? '301' : '302' ?></td><td><?= (int) $r['hit_count'] ?></td>
+            <?= Form::bulkBar('bulk-redirects', '/admin/redirects/bulk', ['activate' => 'Switch on', 'deactivate' => 'Switch off', 'delete' => 'Delete'], 'redirects') ?>
+            <div class="table-wrap"><table class="table"><thead><tr><th class="check"><?= Form::bulkAll('bulk-redirects') ?></th><th>From</th><th>To</th><th>Type</th><th>Hits</th><th></th></tr></thead><tbody>
+                <?php foreach ($rows as $r): ?><tr<?= (int) $r['is_active'] ? '' : ' style="opacity:.55"' ?>><td class="check"><?= Form::bulkCheck('bulk-redirects', (int) $r['id'], $r['source']) ?></td><td><code><?= e($r['source']) ?></code><?php if ($r['origin'] === 'AUTOMATIC'): ?> <span class="badge">auto</span><?php endif; ?></td><td class="small" style="word-break:break-all"><?= e($r['destination']) ?></td><td><?= $r['type'] === 'PERMANENT' ? '301' : '302' ?></td><td><?= (int) $r['hit_count'] ?></td>
                     <td class="actions"><a class="btn btn-ghost btn-sm" href="?edit=<?= (int) $r['id'] ?>">Edit</a><?= Form::action('/admin/redirects/' . $r['id'] . '/delete', 'Delete', 'btn btn-danger-ghost btn-sm', 'Delete this redirect?') ?></td></tr><?php endforeach; ?>
             </tbody></table></div><?php endif; ?>
         </div>

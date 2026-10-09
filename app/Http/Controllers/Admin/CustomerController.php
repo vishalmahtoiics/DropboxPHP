@@ -141,6 +141,32 @@ final class CustomerController extends AdminController
         return $this->redirect('/admin/customers/' . $c['id']);
     }
 
+    /** The list's "with selected" actions: set a status or move to the recycle bin. */
+    public function bulk(): Response
+    {
+        $action = $this->request->str('action');
+        $ids = $this->bulkIds();
+        $status = str_starts_with($action, 'status:') ? substr($action, 7) : null;
+        if (!$ids || ($action !== 'delete' && !isset(self::STATUSES[(string) $status]))) {
+            $this->flash('Select customers and an action.', 'warning');
+            return $this->back('/admin/customers');
+        }
+        $this->authorize($action === 'delete' ? 'customers.delete' : 'customers.edit');
+        [$in, $params] = DB::in($ids);
+        $done = 0;
+        foreach (DB::all("SELECT id, name FROM customers WHERE id IN ($in) AND deleted_at IS NULL", $params) as $c) {
+            if ($action === 'delete') {
+                DB::update('customers', ['deleted_at' => now()], ['id' => $c['id']]);
+                Audit::record('deleted', 'Customer', $c['id'], $c['name']);
+            } else {
+                DB::update('customers', ['status' => $status], ['id' => $c['id']]);
+                Audit::record('updated', 'Customer', $c['id'], $c['name'] . ' → ' . $status);
+            }
+            $done++;
+        }
+        return $this->bulkDone('/admin/customers', $done, $done === 1 ? 'customer' : 'customers');
+    }
+
     public function destroy(string $id): Response
     {
         $this->authorize('customers.delete');

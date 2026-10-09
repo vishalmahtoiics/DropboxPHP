@@ -226,6 +226,32 @@ final class FormController extends AdminController
         return $this->redirect('/admin/forms/' . $newId);
     }
 
+    /** The list's "with selected" actions: switch on, switch off or move to the recycle bin. */
+    public function bulk(): Response
+    {
+        $action = $this->request->str('action');
+        $ids = $this->bulkIds();
+        if (!$ids || !in_array($action, ['activate', 'deactivate', 'delete'], true)) {
+            $this->flash('Select forms and an action.', 'warning');
+            return $this->back('/admin/forms');
+        }
+        $this->authorize($action === 'delete' ? 'forms.delete' : 'forms.edit');
+        [$in, $params] = DB::in($ids);
+        $done = 0;
+        foreach (DB::all("SELECT * FROM forms WHERE id IN ($in) AND deleted_at IS NULL", $params) as $form) {
+            if ($action === 'delete') {
+                DB::update('forms', ['deleted_at' => now(), 'is_active' => 0, 'slug' => Slugs::trashed($form['slug'], (int) $form['id'])], ['id' => $form['id']]);
+                Audit::record('deleted', 'Form', $form['id'], $form['name']);
+            } else {
+                DB::update('forms', ['is_active' => $action === 'activate' ? 1 : 0], ['id' => $form['id']]);
+                Audit::record('updated', 'Form', $form['id'], $form['name'] . ($action === 'activate' ? ' switched on' : ' switched off'));
+            }
+            $done++;
+        }
+        Forms::clearCache();
+        return $this->bulkDone('/admin/forms', $done, $done === 1 ? 'form' : 'forms');
+    }
+
     public function destroy(string $id): Response
     {
         $this->authorize('forms.delete');

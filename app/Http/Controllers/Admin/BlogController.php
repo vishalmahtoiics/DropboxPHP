@@ -211,6 +211,38 @@ final class BlogController extends AdminController
         });
     }
 
+    /** The list's "with selected" actions. */
+    public function bulk(): Response
+    {
+        $action = $this->request->str('action');
+        $ids = $this->bulkIds();
+        $status = ['publish' => 'PUBLISHED', 'draft' => 'DRAFT', 'archive' => 'ARCHIVED'][$action] ?? null;
+        if (!$ids || ($status === null && $action !== 'delete')) {
+            $this->flash('Select articles and an action.', 'warning');
+            return $this->back('/admin/blog');
+        }
+        $this->authorize($action === 'delete' ? 'blog.delete' : 'blog.publish');
+        [$in, $params] = DB::in($ids);
+        $posts = array_filter(DB::all("SELECT * FROM blog_posts WHERE id IN ($in) AND deleted_at IS NULL", $params),
+            static fn ($p) => in_array((int) $p['country_id'], Countries::accessibleIds(), true));
+        $done = 0;
+        foreach ($posts as $post) {
+            if ($action === 'delete') {
+                DB::update('blog_posts', ['deleted_at' => now(), 'slug' => Slugs::trashed($post['slug'], (int) $post['id']), 'status' => 'DRAFT'], ['id' => $post['id']]);
+                Audit::record('deleted', 'BlogPost', $post['id'], 'Moved "' . $post['title'] . '" to the recycle bin');
+            } else {
+                $at = $post['published_at'];
+                if ($status === 'PUBLISHED' && (!$at || strtotime((string) $at) > time())) {
+                    $at = now();
+                }
+                DB::update('blog_posts', ['status' => $status, 'published_at' => $at], ['id' => $post['id']]);
+                Audit::record($status === 'PUBLISHED' ? 'published' : 'status-changed', 'BlogPost', $post['id'], $post['title'] . ' → ' . $status);
+            }
+            $done++;
+        }
+        return $this->bulkDone('/admin/blog', $done, $done === 1 ? 'article' : 'articles');
+    }
+
     public function destroy(string $id): Response
     {
         $this->authorize('blog.delete');

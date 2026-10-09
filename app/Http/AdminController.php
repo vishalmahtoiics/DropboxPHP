@@ -63,6 +63,24 @@ abstract class AdminController extends Controller
         return Response::html(View::render('admin/' . $template, $data, 'layouts/admin'));
     }
 
+    /** The ids ticked in a list's bulk bar (at most 1000). @return list<int> */
+    protected function bulkIds(): array
+    {
+        $ids = array_filter(array_map('intval', array_filter($this->request->arr('ids'), 'is_scalar')), static fn (int $i) => $i > 0);
+        return array_slice(array_values(array_unique($ids)), 0, 1000);
+    }
+
+    /** Flash the outcome of a bulk action and go back to the list. */
+    protected function bulkDone(string $fallback, int $done, string $noun, array $skipped = []): Response
+    {
+        $message = $done . ' ' . $noun . ' updated.';
+        if ($skipped) {
+            $message .= ' Skipped: ' . implode('; ', array_slice($skipped, 0, 5)) . (count($skipped) > 5 ? ' and ' . (count($skipped) - 5) . ' more' : '') . '.';
+        }
+        $this->flash($message, $skipped && !$done ? 'warning' : 'success');
+        return $this->back($fallback);
+    }
+
     protected function id(string $value): int
     {
         if (!ctype_digit($value)) {

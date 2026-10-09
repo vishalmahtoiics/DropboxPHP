@@ -34,14 +34,29 @@ $size = static fn (int $b) => $b > 1048576 ? round($b / 1048576, 1) . ' MB' : ma
             <input class="input search" type="search" name="q" value="<?= e($q) ?>" placeholder="Search name or alt text">
             <select class="select" name="kind" data-autosubmit><option value="">All types</option><?php foreach (['IMAGE' => 'Images', 'VIDEO' => 'Video', 'DOCUMENT' => 'Documents'] as $k => $v): ?><option value="<?= $k ?>"<?= $kind === $k ? ' selected' : '' ?>><?= $v ?></option><?php endforeach; ?></select>
         </form>
+        <?php
+        $bulk = [];
+        if (can('media.edit')) {
+            $bulk['Move to folder'] = ['folder:none' => 'No folder'];
+            foreach ($folders as $f) {
+                $bulk['Move to folder']['folder:' . (int) $f['id']] = $f['name'];
+            }
+        }
+        if (can('media.delete')) {
+            $bulk['delete'] = 'Delete (keep files that pages use)';
+            $bulk['delete-all'] = 'Delete, even files that pages use';
+        }
+        ?>
+        <?php if ($items): ?><?= Form::bulkBar('bulk-media', '/admin/media/bulk', $bulk, 'files') ?><?php if ($bulk): ?><div class="toolbar small" style="padding-block:.4rem"><label class="checkbox"><?= Form::bulkAll('bulk-media') ?> <span>Select all on this page</span></label></div><?php endif; ?><?php endif; ?>
         <div class="card-body">
             <?php if (!$items): ?><div class="empty"><?= Icons::svg('image', 'icon', 32) ?><p>No files here yet.</p></div><?php endif; ?>
             <div class="media-grid">
                 <?php foreach ($items as $m): ?>
+                    <div class="media-tile-wrap"><?php if ($bulk): ?><span class="media-check"><?= Form::bulkCheck('bulk-media', (int) $m['id'], $m['filename']) ?></span><?php endif; ?>
                     <a class="media-tile<?= $selected && (int) $selected['id'] === (int) $m['id'] ? ' selected' : '' ?>" href="<?= e($qs(['item' => $m['id'], 'page' => $pageNo > 1 ? $pageNo : null])) ?>">
                         <?php if ($m['kind'] === 'IMAGE'): ?><img src="<?= e($m['url']) ?>" alt="" loading="lazy"><?php else: ?><div class="file-ph"><?= e(strtoupper(pathinfo($m['filename'], PATHINFO_EXTENSION))) ?></div><?php endif; ?>
                         <div class="cap truncate"><?= e($m['filename']) ?></div>
-                    </a>
+                    </a></div>
                 <?php endforeach; ?>
             </div>
         </div>

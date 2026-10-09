@@ -20,10 +20,21 @@ $actions = (can('blog.create') ? '<a class="btn btn-primary" href="/admin/blog/n
         <select class="select" name="category" data-autosubmit><option value="">All categories</option><?php foreach ($categories as $k => $v): ?><option value="<?= (int) $k ?>"<?= (int) ($_GET['category'] ?? 0) === (int) $k ? ' selected' : '' ?>><?= e($v) ?></option><?php endforeach; ?></select>
     </form>
     <?php if (!$rows): ?><div class="empty"><?= Icons::svg('pen', 'icon', 32) ?><p>No articles yet.</p></div><?php else: ?>
+    <?php
+    $bulk = [];
+    if (can('blog.publish')) {
+        $bulk += ['publish' => 'Publish', 'draft' => 'Move to draft', 'archive' => 'Archive'];
+    }
+    if (can('blog.delete')) {
+        $bulk['delete'] = 'Move to recycle bin';
+    }
+    ?>
+    <?= Form::bulkBar('bulk-posts', '/admin/blog/bulk', $bulk, 'articles') ?>
     <div class="table-wrap"><table class="table">
-        <thead><tr><th>Title</th><th class="hide-sm">Category</th><th>Status</th><th class="hide-sm">Views</th><th>Date</th><th></th></tr></thead>
+        <thead><tr><?php if ($bulk): ?><th class="check"><?= Form::bulkAll('bulk-posts') ?></th><?php endif; ?><th>Title</th><th class="hide-sm">Category</th><th>Status</th><th class="hide-sm">Views</th><th>Date</th><th></th></tr></thead>
         <tbody><?php foreach ($rows as $r): ?>
             <tr>
+                <?php if ($bulk): ?><td class="check"><?= Form::bulkCheck('bulk-posts', (int) $r['id'], $r['title']) ?></td><?php endif; ?>
                 <td><a class="row-title" href="/admin/blog/<?= (int) $r['id'] ?>"><?= e($r['title']) ?></a><?php if ((int) $r['is_featured']): ?> <span class="badge blue">Featured</span><?php endif; ?><div class="small muted"><?= e($r['author_name'] ?? '') ?> · <?= (int) $r['reading_time'] ?> min</div></td>
                 <td class="hide-sm small"><?= e($r['category_name'] ?? '—') ?></td>
                 <td><?= Form::badge($r['status']) ?></td>

@@ -16,11 +16,22 @@ $actions = (can('products.create') ? '<a class="btn btn-primary" href="/admin/pr
         <?php if ($brands): ?><select class="select" name="brand" data-autosubmit><option value="">All brands</option><?php foreach ($brands as $k => $v): ?><option value="<?= (int) $k ?>"<?= (int) ($_GET['brand'] ?? 0) === (int) $k ? ' selected' : '' ?>><?= e($v) ?></option><?php endforeach; ?></select><?php endif; ?>
     </form>
     <?php if (!$rows): ?><div class="empty"><?= Icons::svg('package', 'icon', 32) ?><p>No products yet.</p></div><?php else: ?>
+    <?php
+    $bulk = [];
+    if (can('products.edit')) {
+        $bulk += ['publish' => 'Publish', 'draft' => 'Move to draft', 'archive' => 'Archive'];
+    }
+    if (can('products.delete')) {
+        $bulk['delete'] = 'Move to recycle bin';
+    }
+    ?>
+    <?= Form::bulkBar('bulk-products', '/admin/products/bulk', $bulk, 'products') ?>
     <div class="table-wrap"><table class="table">
-        <thead><tr><th>Product</th><th class="hide-sm">Category</th><th>Status</th><th>In <?= e($adminCountry['name']) ?></th><th class="hide-sm">Price (annual / monthly)</th><th></th></tr></thead>
+        <thead><tr><?php if ($bulk): ?><th class="check"><?= Form::bulkAll('bulk-products') ?></th><?php endif; ?><th>Product</th><th class="hide-sm">Category</th><th>Status</th><th>In <?= e($adminCountry['name']) ?></th><th class="hide-sm">Price (annual / monthly)</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($rows as $r): ?>
             <tr>
+                <?php if ($bulk): ?><td class="check"><?= Form::bulkCheck('bulk-products', (int) $r['id'], $r['name']) ?></td><?php endif; ?>
                 <td><div class="row" style="gap:.6rem;flex-wrap:nowrap">
                     <?php if ($r['image_url']): ?><img src="<?= e($r['image_url']) ?>" alt="" width="36" height="36" style="border-radius:8px;object-fit:cover"><?php endif; ?>
                     <div><a class="row-title" href="/admin/products/<?= (int) $r['id'] ?>"><?= e($r['name']) ?></a><?php if ((int) $r['pc_featured']): ?> <span class="badge blue">Featured</span><?php endif; ?><div class="small muted"><?= e($r['sku'] ?: $r['slug']) ?></div></div>

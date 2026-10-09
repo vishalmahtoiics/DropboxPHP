@@ -467,6 +467,30 @@ final class BuilderController extends AdminController
         return $this->redirect('/admin/builder/templates');
     }
 
+    /** Delete the ticked templates (each needs the same permission as editing it). */
+    public function bulkTemplates(): Response
+    {
+        $ids = $this->bulkIds();
+        if (!$ids || $this->request->str('action') !== 'delete') {
+            $this->flash('Select templates and an action.', 'warning');
+            return $this->redirect('/admin/builder/templates');
+        }
+        [$in, $params] = DB::in($ids);
+        $done = 0;
+        $skipped = [];
+        foreach (DB::all("SELECT * FROM builder_templates WHERE id IN ($in)", $params) as $tpl) {
+            if (!Auth::can(Store::permission('template', $tpl))) {
+                $skipped[] = '"' . $tpl['name'] . '" needs another permission';
+                continue;
+            }
+            DB::delete('builder_templates', ['id' => $tpl['id']]);
+            DB::query("DELETE FROM builder_revisions WHERE owner_type = 'template' AND owner_id = ?", [$tpl['id']]);
+            Audit::record('deleted', 'Template', (int) $tpl['id'], 'Deleted builder template "' . $tpl['name'] . '"');
+            $done++;
+        }
+        return $this->bulkDone('/admin/builder/templates', $done, $done === 1 ? 'template' : 'templates', $skipped);
+    }
+
     /** Templates that can be inserted into the layout being edited. */
     public function templateList(): Response
     {
