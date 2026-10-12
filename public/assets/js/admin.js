@@ -243,6 +243,33 @@
   });
   $$('[data-repeater]').forEach(renumber);
 
+  // --- form builder rows: open one to edit it; the row title follows its settings ---------
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-field-toggle]');
+    if (!t) return;
+    const row = t.closest('[data-field-row]');
+    const open = !row.classList.contains('is-open');
+    row.classList.toggle('is-open', open);
+    t.setAttribute('aria-expanded', String(open));
+    if (open) { const first = $('[data-name="label"]', row); if (first && !first.value) first.focus(); }
+  });
+  const syncFieldRow = (row) => {
+    const get = (n) => $('[data-name="' + n + '"]', row);
+    const title = $('[data-field-title]', row), type = $('[data-field-type]', row);
+    if (title) title.textContent = (get('label') && get('label').value.trim()) || 'New field';
+    if (type && get('type')) type.textContent = get('type').selectedOptions[0] ? get('type').selectedOptions[0].textContent : '';
+    const badge = (k, on) => { const b = $('[data-badge="' + k + '"]', row); if (b) b.hidden = !on; };
+    badge('required', get('is_required') && get('is_required').checked);
+    badge('half', get('width') && get('width').value === 'half');
+    const off = get('is_enabled') && !get('is_enabled').checked;
+    badge('off', off);
+    row.classList.toggle('is-off', !!off);
+  };
+  ['input', 'change'].forEach((ev) => document.addEventListener(ev, (e) => {
+    const row = e.target.closest && e.target.closest('[data-field-row]');
+    if (row) syncFieldRow(row);
+  }));
+
   // --- icon picker -------------------------------------------------------------------
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-icon-choice]');
