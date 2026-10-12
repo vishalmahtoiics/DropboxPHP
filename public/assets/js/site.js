@@ -337,11 +337,34 @@
     const btn = $('[data-bx-nav-toggle]', nav);
     if (!btn) return;
     const close = () => { nav.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); };
+    // The opened menu spans the screen just below its header bar.
+    const place = () => {
+      if (!nav.classList.contains('is-open')) return;
+      const bar = nav.closest('.bx-con.bx-top') || nav;
+      nav.style.setProperty('--bx-nav-top', Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) + 'px');
+    };
+    window.addEventListener('scroll', place, { passive: true });
+    window.addEventListener('resize', place);
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const open = !nav.classList.contains('is-open');
       nav.classList.toggle('is-open', open);
       btn.setAttribute('aria-expanded', String(open));
+      place();
+    });
+    // In the opened menu, sub-menus start closed: the arrow (or a parent link with no page) opens one.
+    nav.addEventListener('click', (e) => {
+      if (!nav.classList.contains('is-open')) return;
+      const toggle = e.target.closest('[data-bx-sub-toggle]');
+      const parent = e.target.closest('.has-sub > a');
+      if (!toggle && !(parent && ['', '#'].includes(parent.getAttribute('href') || ''))) return;
+      e.preventDefault();
+      const li = (toggle || parent).closest('li');
+      const open = !li.classList.contains('sub-open');
+      $$('.has-sub.sub-open', nav).forEach((o) => { if (o !== li) { o.classList.remove('sub-open'); const b = $('[data-bx-sub-toggle]', o); if (b) b.setAttribute('aria-expanded', 'false'); } });
+      li.classList.toggle('sub-open', open);
+      const b = $('[data-bx-sub-toggle]', li);
+      if (b) b.setAttribute('aria-expanded', String(open));
     });
     document.addEventListener('click', (e) => { if (!nav.contains(e.target)) close(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });

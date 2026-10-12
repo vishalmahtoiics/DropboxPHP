@@ -29,10 +29,13 @@ $link = static fn (array $i, string $extra = '') => '<a href="' . e((string) $i[
     <ul class="bx-nav-list" id="<?= e($id) ?>">
         <?php foreach ($items as $item): ?>
             <?php $kids = $s['submenus'] ? $item['children'] : []; ?>
+            <?php $subId = $id . '-' . (int) $item['id']; ?>
             <li class="<?= $kids ? 'has-sub' : '' ?>">
                 <?= $link($item, trim(($active($item) ? 'active' : '') . ((int) $item['is_highlighted'] ? ' highlight' : ''))) ?><?= e($item['label']) ?><?= $kids ? Icons::svg('chevron-down', 'icon bx-caret', 14) : '' ?></a>
                 <?php if ($kids): ?>
-                    <ul class="bx-sub">
+                    <?php /* Only shown in the opened phone/tablet menu, where sub-menus start closed. */ ?>
+                    <button class="bx-sub-toggle" type="button" aria-expanded="false" aria-controls="<?= e($subId) ?>" aria-label="<?= e('Show ' . $item['label'] . ' links') ?>" data-bx-sub-toggle><?= Icons::svg('chevron-down', 'icon', 18) ?></button>
+                    <ul class="bx-sub" id="<?= e($subId) ?>">
                         <?php foreach ($kids as $child): ?>
                             <li><?= $link($child) ?><?php if ($child['icon']): ?><?= Icons::svg($child['icon'], 'icon', 18) ?><?php endif; ?><span><strong><?= e($child['label']) ?></strong><?php if ($child['description']): ?><small><?= e($child['description']) ?></small><?php endif; ?></span></a></li>
                         <?php endforeach; ?>

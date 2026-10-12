@@ -620,9 +620,19 @@ a.bx-con { color: inherit; text-decoration: none; }
   .bx-collapse-mobile .bx-nav-toggle { display: inline-flex; }
   .bx-collapse-mobile .bx-nav-list { display: none; }
 }
-.bx-nav.is-open .bx-nav-list { display: flex; position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; align-items: stretch; gap: 0; padding: .75rem var(--gutter) 1.25rem; background: var(--bg); border-top: 1px solid var(--border); box-shadow: 0 18px 30px rgba(11, 27, 52, .12); z-index: 70; }
-.bx-nav.is-open .bx-nav-list > li > a { padding: .7rem 0; width: 100%; }
-.bx-nav.is-open .bx-sub { position: static; opacity: 1; visibility: visible; transform: none; box-shadow: none; border: 0; min-width: 0; padding: 0 0 .5rem .5rem; background: none; }
+.bx-sub-toggle { display: none; }
+.bx-nav.is-open .bx-nav-list { display: flex; position: fixed; left: 0; right: 0; top: var(--bx-nav-top, 64px); flex-direction: column; align-items: stretch; gap: 0; padding: .5rem var(--gutter) 1rem; background: var(--bg); border-top: 1px solid var(--border); box-shadow: 0 18px 30px rgba(11, 27, 52, .12); z-index: 70; max-height: calc(100dvh - var(--bx-nav-top, 64px)); overflow-y: auto; overscroll-behavior: contain; }
+.bx-nav.is-open .bx-nav-list > li { display: flex; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border); }
+.bx-nav.is-open .bx-nav-list > li:last-child { border-bottom: 0; }
+.bx-nav.is-open .bx-nav-list > li > a { flex: 1 1 0; min-width: 0; padding: .8rem 0; }
+.bx-nav.is-open .bx-caret { display: none; }
+.bx-nav.is-open .bx-sub-toggle { display: inline-grid; place-items: center; width: 40px; height: 40px; margin-right: -.4rem; border: 0; border-radius: .6rem; background: none; color: inherit; cursor: pointer; }
+.bx-nav.is-open .bx-sub-toggle:hover { background: var(--surface); }
+.bx-nav.is-open .bx-sub-toggle .icon { transition: transform .2s; }
+.bx-nav.is-open .sub-open > .bx-sub-toggle .icon { transform: rotate(180deg); }
+.bx-nav.is-open .bx-sub { display: none; flex-basis: 100%; position: static; opacity: 1; visibility: visible; transform: none; box-shadow: none; border: 0; min-width: 0; padding: 0 0 .6rem .75rem; background: none; }
+.bx-nav.is-open .sub-open > .bx-sub { display: block; }
+.bx-nav.is-open .bx-sub a { padding: .55rem .5rem; }
 .bx-contact { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
 .bx-contact.bx-inline { flex-direction: row; flex-wrap: wrap; gap: .5rem 1.5rem; }
 .bx-contact li { display: flex; gap: .55rem; align-items: flex-start; }
