@@ -332,6 +332,29 @@ dialog::backdrop { background: rgba(11, 27, 52, .35); backdrop-filter: blur(6px)
 .block-option:hover { border-color: var(--brand); background: var(--brand-50); }
 .block-option small { display: block; color: var(--muted); font-size: .75rem; }
 .repeater-item { border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem; margin-bottom: .6rem; background: var(--surface-2); }
+[hidden] { display: none !important; }
+/* Form builder: one compact row per field, opened to edit it. */
+.field-row { padding: 0; overflow: hidden; background: var(--field); transition: box-shadow .15s, border-color .15s; }
+.field-row.is-open { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-50); }
+.field-row.is-off .field-row-title { color: var(--faint); text-decoration: line-through; }
+.field-row-head { display: flex; align-items: center; gap: .4rem; padding: .35rem .5rem .35rem .25rem; }
+.field-row-toggle { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; padding: .45rem .5rem; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
+.field-row-toggle:hover { background: var(--surface-2); }
+.field-row-caret { color: var(--faint); transition: transform .15s; }
+.field-row.is-open .field-row-caret { transform: rotate(90deg); color: var(--brand); }
+.field-row-index { color: var(--faint); font-size: .8rem; font-weight: 600; min-width: 1.6rem; }
+.field-row-title { font-weight: 600; }
+.field-row-actions { display: flex; gap: .15rem; flex-shrink: 0; }
+.field-row-body { display: none; padding: .4rem 1rem 1rem; border-top: 1px solid var(--border); }
+.field-row.is-open .field-row-body { display: block; }
+.field-row-body .grid { margin-top: .6rem; }
+.field-row-switches { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.4rem; margin-top: .9rem; }
+.field-inline { display: flex; align-items: center; gap: .5rem; }
+.field-inline .label { margin: 0; }
+.field-inline .select { width: auto; }
+.field-row-more { margin-top: .9rem; }
+.field-row-more summary { font-size: .8125rem; font-weight: 600; margin: 0; }
+.span-3 { grid-column: 1 / -1; }
 .repeater-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; gap: .5rem; }
 .repeater-item-head strong { font-size: .8125rem; }
 .media-input { display: flex; gap: .5rem; align-items: center; }
