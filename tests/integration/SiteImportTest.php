@@ -188,6 +188,56 @@ test('images keep their folder and name, re-imports reuse them, and old image ad
     assert_same(301, $old->status, 'the old address redirects');
 });
 
+test('blog articles go into the blog at their address, with image, category, tags and date', function () use ($package, $upload, $png): void {
+    $india = (int) DB::value("SELECT id FROM countries WHERE code = 'IN'");
+    DB::insert('blog_posts', ['country_id' => $india, 'title' => 'Old', 'slug' => 'imp-post-existing', 'status' => 'PUBLISHED', 'published_at' => now(), 'content' => '<p>Old body</p>', 'excerpt' => 'Old']);
+    $make = static fn (string $body) => $package([
+        'format' => 'site-package', 'version' => 1, 'name' => 'blog.example',
+        'posts' => [
+            ['slug' => 'imp-post', 'title' => 'Imported post', 'file' => 'posts/imp-post.html', 'image' => 'pkg:media/2024/06/cover.png', 'category' => 'Imp Workspace',
+             'tags' => ['Imp Tips', ''], 'published_at' => '2024-06-24', 'seo_title' => 'Imported | Blog', 'seo_description' => 'About it.'],
+            ['slug' => 'imp-post-existing', 'title' => 'Existing post', 'content' => '<p>New body</p>'],
+            ['slug' => 'imp-post-evil', 'title' => 'Evil', 'file' => '../evil.html'],
+        ],
+    ], [
+        'posts/imp-post.html' => '<h2>Hello</h2><p>' . $body . ' <img src="pkg:media/2024/06/cover.png" alt="c"></p><script>alert(1)</script>',
+        'media/2024/06/cover.png' => $png,
+    ]);
+    sign_in_as('admin');
+    $zip = $make('First body');
+    $res = $upload($zip);
+    unlink($zip);
+    assert_same(200, $res->status, substr($res->body, 0, 300));
+    assert_contains('Blog articles', $res->body);
+    $post = DB::first("SELECT * FROM blog_posts WHERE country_id = ? AND slug = 'imp-post'", [$india]);
+    assert_same('DRAFT', $post['status'], 'imported articles are drafts by default');
+    assert_same('2024-06-24 00:00:00', $post['published_at'], 'the original date is kept for when it is published');
+    assert_contains('First body', $post['content']);
+    assert_not_contains('<script', $post['content']);
+    assert_not_contains('pkg:', $post['content']);
+    $cover = (string) DB::value('SELECT url FROM media WHERE id = ?', [$post['featured_image_id']]);
+    assert_true($cover !== '' && str_contains($post['content'], $cover), 'the cover is the featured image and images in the text point at it');
+    assert_same('Imp Workspace', DB::value('SELECT name FROM blog_categories WHERE id = ?', [$post['category_id']]));
+    assert_same(['Imp Tips'], DB::column('SELECT t.name FROM blog_post_tags pt JOIN blog_tags t ON t.id = pt.tag_id WHERE pt.post_id = ?', [$post['id']]));
+    assert_same('Imported | Blog', $post['seo_title']);
+    assert_contains('Old body', (string) DB::value("SELECT content FROM blog_posts WHERE slug = 'imp-post-existing'"), 'an existing article is left alone');
+    assert_same(null, DB::value("SELECT id FROM blog_posts WHERE slug = 'imp-post-evil'"));
+
+    // Replace everything: published at its address, existing articles overwritten, nothing duplicated.
+    $zip = $make('Second body');
+    $res = $upload($zip, ['replace' => '1']);
+    unlink($zip);
+    assert_same(200, $res->status, substr($res->body, 0, 300));
+    $post = DB::first("SELECT * FROM blog_posts WHERE country_id = ? AND slug = 'imp-post'", [$india]);
+    assert_same('PUBLISHED', $post['status']);
+    assert_same('2024-06-24 00:00:00', $post['published_at']);
+    assert_same(1, (int) DB::value("SELECT COUNT(*) FROM blog_posts WHERE slug = 'imp-post'"));
+    assert_contains('New body', (string) DB::value("SELECT content FROM blog_posts WHERE slug = 'imp-post-existing'"));
+    $live = dispatch(fake_request('GET', '/blog/imp-post'));
+    assert_same(200, $live->status);
+    assert_contains('Second body', $live->body);
+});
+
 test('site import is hidden from the menu, needs a signed-in administrator and a real package', function () use ($package, $upload): void {
     App\Core\Session::useMemory();
     App\Core\Auth::reset();
