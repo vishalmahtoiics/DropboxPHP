@@ -35,6 +35,26 @@ $counts = array_count_values(array_column($report['pages'], 'action'));
         </tbody>
     </table>
 </div>
+<?php if (!empty($report['posts'])): ?>
+    <div class="card mb-2">
+        <div class="card-head"><h2>Blog articles</h2></div>
+        <table class="table">
+            <thead><tr><th>Article</th><th>Address</th><th>Result</th><th></th></tr></thead>
+            <tbody>
+            <?php foreach ($report['posts'] as $p): [$tone, $label] = $labels[$p['action']]; ?>
+                <tr>
+                    <td><strong><?= e($p['title']) ?></strong><?php if ($p['note']): ?><br><span class="small muted"><?= e($p['note']) ?></span><?php endif; ?></td>
+                    <td class="small"><?= e($report['blog_base'] ?? '/blog') ?>/<?= e($p['slug']) ?></td>
+                    <td><span class="badge <?= $tone ?>"><?= $label ?></span></td>
+                    <td class="row" style="justify-content:flex-end;gap:.25rem">
+                        <?php if ($p['id'] && $p['action'] !== 'skipped'): ?><a class="btn btn-primary btn-sm" href="/admin/blog/<?= (int) $p['id'] ?>">Edit</a><?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>
 <?php if (!empty($report['images'])): ?>
     <details class="card mb-2">
         <summary class="card-head"><h2>Image addresses (<?= count($report['images']) ?>)</h2></summary>

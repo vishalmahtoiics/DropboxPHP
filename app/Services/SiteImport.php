@@ -26,8 +26,11 @@ use ZipArchive;
  *                    "forms":[{"slug":"contact","name":"Contact","submit_label":"Send","success_message":"…",
  *                              "fields":[{"type":"NAME","label":"Name","name":"name","placeholder":"Name","required":true}]}],
  *                    "menus":{"HEADER":[{"label":"Home","url":"/","children":[]}]},
- *                    "redirects":[{"from":"/old","to":"/new"}]}
+ *                    "redirects":[{"from":"/old","to":"/new"}],
+ *                    "posts":[{"slug":"my-post","title":"…","file":"posts/my-post.html","excerpt":"…","image":"pkg:media/…",
+ *                              "category":"News","tags":["Tips"],"published_at":"2024-06-24","seo_title":"…","seo_description":"…"}]}
  *   pages/*.json, templates/*.json   builder layout files (App\Builder\Transfer)
+ *   posts/*.html                     blog article bodies (HTML; images as "pkg:media/…"), or "content" in the manifest
  *   media/…                          images; layouts refer to them as "pkg:media/…"
  *   (manifest) "media_sources":      optional {"media/2018/11/a.jpg": ["/wp-content/uploads/2018/11/a.jpg", …]}:
  *                                    the image's addresses on the old site, redirected to its new one
@@ -46,6 +49,10 @@ use ZipArchive;
  * With "replace" the package becomes the live site: existing pages, forms,
  * templates of the same name and menus are replaced, every imported page is
  * published, and the package's header and footer are made active.
+ *
+ * Blog articles go into the market's blog (Admin → Blog) at /<blog base>/<slug>: new ones are
+ * drafts (with "replace": published, keeping the package's publish date); an article that
+ * already uses the address is left alone, or overwritten with "replace".
  */
 final class SiteImport
 {
@@ -55,13 +62,14 @@ final class SiteImport
     public const MAX_TOTAL_BYTES = 500 * 1024 * 1024;   // uncompressed
     public const MAX_MANIFEST_BYTES = 2 * 1024 * 1024;
     public const MAX_PAGES = 1000;
+    public const MAX_POST_BYTES = 2 * 1024 * 1024;
     private const MENU_LOCATIONS = ['HEADER', 'FOOTER', 'FOOTER_SECONDARY', 'LEGAL', 'MOBILE'];
 
     private ZipArchive $zip;
     /** @var array<string, string> package media path => site URL */
     private array $media = [];
     /** @var array{pages: list<array>, templates: list<array>, forms: list<array>, menus: list<string>, redirects: int, media: int, warnings: list<string>} */
-    private array $report = ['pages' => [], 'templates' => [], 'forms' => [], 'menus' => [], 'redirects' => 0, 'media' => 0, 'images' => [], 'warnings' => []];
+    private array $report = ['pages' => [], 'posts' => [], 'templates' => [], 'forms' => [], 'menus' => [], 'redirects' => 0, 'media' => 0, 'images' => [], 'warnings' => []];
 
     /**
      * @param array{country_id:int, existing:string, templates:bool, menus:bool, redirects:bool, replace?:bool} $options
@@ -100,6 +108,7 @@ final class SiteImport
                     $this->importTemplates($manifest['templates'] ?? [], $userId, $options['replace']);
                 }
                 $this->importPages($manifest['pages'] ?? [], $options, $userId);
+                $this->importPosts((array) ($manifest['posts'] ?? []), $options, $userId);
                 if ($options['menus']) {
                     $this->importMenus($manifest['menus'] ?? [], (int) $options['country_id']);
                 }
@@ -143,8 +152,8 @@ final class SiteImport
         if ((int) ($data['version'] ?? 0) > self::VERSION) {
             throw ValidationException::with('file', 'This package was made by a newer version of the site. Update the site first.');
         }
-        if (count((array) ($data['pages'] ?? [])) > self::MAX_PAGES) {
-            throw ValidationException::with('file', 'The package has too many pages (at most ' . self::MAX_PAGES . ').');
+        if (count((array) ($data['pages'] ?? [])) > self::MAX_PAGES || count((array) ($data['posts'] ?? [])) > self::MAX_PAGES) {
+            throw ValidationException::with('file', 'The package has too many pages or articles (at most ' . self::MAX_PAGES . ' of each).');
         }
         return $data;
     }
@@ -500,6 +509,112 @@ final class SiteImport
                 'updated_by_id' => $userId,
             ]);
             $this->report['pages'][] = ['id' => $id, 'title' => $title, 'slug' => $slug, 'action' => $replace ? 'published' : 'created', 'note' => ''];
+        }
+    }
+
+    // --- blog articles -----------------------------------------------------------------
+
+    private function importPosts(array $posts, array $options, int $userId): void
+    {
+        if (!$posts) {
+            return;
+        }
+        if (!Auth::can('blog.create')) {
+            $this->report['warnings'][] = 'Blog articles were not imported: your role cannot write articles.';
+            return;
+        }
+        $countryId = (int) $options['country_id'];
+        $this->report['blog_base'] = Content::blogBase(DB::first('SELECT * FROM countries WHERE id = ?', [$countryId]));
+        // Publishing needs the right to publish; without it the articles arrive as drafts.
+        $publish = $options['replace'] && Auth::can('blog.publish');
+        if ($options['replace'] && !$publish) {
+            $this->report['warnings'][] = 'Blog articles were imported as drafts: your role cannot publish articles.';
+        }
+        foreach ($posts as $p) {
+            if (!is_array($p)) {
+                continue;
+            }
+            $title = Sanitizer::line((string) ($p['title'] ?? ''), 255);
+            $slug = Slugs::make((string) ($p['slug'] ?? '') ?: $title);
+            if ($title === '' || $slug === '') {
+                continue;
+            }
+            $existing = DB::first('SELECT * FROM blog_posts WHERE country_id = ? AND slug = ? AND deleted_at IS NULL', [$countryId, $slug]);
+            if ($existing && !$options['replace']) {
+                $this->report['posts'][] = ['id' => (int) $existing['id'], 'title' => $title, 'slug' => $slug, 'action' => 'skipped', 'note' => 'an article already uses this address'];
+                continue;
+            }
+            $html = isset($p['file']) ? $this->entry((string) $p['file'], self::MAX_POST_BYTES) : (is_string($p['content'] ?? null) ? $p['content'] : null);
+            if ($html === null) {
+                $this->report['posts'][] = ['id' => $existing['id'] ?? null, 'title' => $title, 'slug' => $slug, 'action' => 'skipped', 'note' => 'its text could not be read'];
+                continue;
+            }
+            $content = Sanitizer::html((string) $this->withMedia($html));
+            $image = (string) $this->withMedia((string) ($p['image'] ?? ''));
+            $imageId = $image !== '' ? (DB::value('SELECT id FROM media WHERE url = ?', [$image]) ?: null) : null;
+            $date = strtotime((string) ($p['published_at'] ?? '')) ?: null;
+            $publishedAt = $date !== null && $date <= time() ? date('Y-m-d H:i:s', $date) : null;
+            $row = [
+                'title' => $title,
+                'subtitle' => Sanitizer::line((string) ($p['subtitle'] ?? ''), 255) ?: null,
+                'excerpt' => Sanitizer::text((string) ($p['excerpt'] ?? ''), 1000) ?: Sanitizer::text(str_limit(strip_tags($content), 220), 1000),
+                'content' => $content,
+                'reading_time' => max(1, (int) ceil(str_word_count(strip_tags($content)) / 220)),
+                'category_id' => $this->postCategory((string) ($p['category'] ?? '')),
+                'featured_image_id' => $imageId,
+                'og_image_id' => $imageId,
+                'seo_title' => Sanitizer::line((string) ($p['seo_title'] ?? ''), 255) ?: null,
+                'seo_description' => Sanitizer::text((string) ($p['seo_description'] ?? ''), 500) ?: null,
+                'focus_keyword' => Sanitizer::line((string) ($p['focus_keyword'] ?? ''), 120) ?: null,
+            ];
+            if ($existing) {
+                DB::update('blog_posts', $row + [
+                    'status' => $publish ? 'PUBLISHED' : $existing['status'],
+                    'published_at' => $publish ? ($publishedAt ?? $existing['published_at'] ?? now()) : $existing['published_at'],
+                ], ['id' => $existing['id']]);
+                $id = (int) $existing['id'];
+                $this->report['posts'][] = ['id' => $id, 'title' => $title, 'slug' => $slug, 'action' => 'replaced', 'note' => $publish ? 'replaced and published' : 'replaced'];
+            } else {
+                $id = DB::insert('blog_posts', $row + [
+                    'country_id' => $countryId,
+                    'slug' => $slug,
+                    'status' => $publish ? 'PUBLISHED' : 'DRAFT',
+                    // Kept on drafts too, so publishing later shows the original date.
+                    'published_at' => $publishedAt ?? ($publish ? now() : null),
+                    'author_id' => $userId,
+                ]);
+                $this->report['posts'][] = ['id' => $id, 'title' => $title, 'slug' => $slug, 'action' => $publish ? 'published' : 'created', 'note' => ''];
+            }
+            $this->postTags($id, (array) ($p['tags'] ?? []));
+        }
+    }
+
+    /** The category with this name, created when missing. */
+    private function postCategory(string $name): ?int
+    {
+        $name = Sanitizer::line($name, 160);
+        $slug = Slugs::make($name);
+        if ($slug === '') {
+            return null;
+        }
+        $id = DB::value('SELECT id FROM blog_categories WHERE slug = ?', [$slug]);
+        return (int) ($id ?: DB::insert('blog_categories', ['name' => $name, 'slug' => $slug, 'is_active' => 1]));
+    }
+
+    private function postTags(int $postId, array $tags): void
+    {
+        DB::delete('blog_post_tags', ['post_id' => $postId]);
+        $ids = [];
+        foreach (array_slice($tags, 0, 30) as $name) {
+            $name = Sanitizer::line((string) $name, 120);
+            $slug = Slugs::make($name);
+            if ($slug === '') {
+                continue;
+            }
+            $ids[] = (int) (DB::value('SELECT id FROM blog_tags WHERE slug = ?', [$slug]) ?: DB::insert('blog_tags', ['name' => $name, 'slug' => $slug]));
+        }
+        foreach (array_unique($ids) as $tid) {
+            DB::insert('blog_post_tags', ['post_id' => $postId, 'tag_id' => $tid]);
         }
     }
 
