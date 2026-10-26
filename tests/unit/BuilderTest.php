@@ -107,6 +107,16 @@ test('styles are scoped to the element, with tablet and mobile media queries', f
     assert_not_contains('}body', $css);
 });
 
+test('button alignment moves the button inside its row', function (): void {
+    $layout = Layout::normalize(['elements' => [['id' => 'abcd1234', 'type' => 'container', 'children' => [
+        ['id' => 'b0b0b0b0', 'type' => 'button', 'settings' => ['text' => 'Go', 'align' => 'center', 'align_mobile' => 'stretch']],
+    ]]]]);
+    $css = Style::layout($layout);
+    // The widget box is a block, so the rule has to reach the button's own row.
+    assert_contains('.el-b0b0b0b0 .bx-btn-wrap{justify-content:center}', $css);
+    assert_contains('.el-b0b0b0b0 .bx-btn-wrap{justify-content:stretch}', substr($css, (int) strpos($css, '(max-width:767px)')));
+});
+
 test('classic sections convert to a builder layout without losing content', function (): void {
     $layout = Layout::fromSections([
         ['id' => 1, 'block_type' => 'hero', 'is_visible' => 1, 'content' => ['heading' => 'Hello there'], 'settings' => ['preset' => 'dark']],

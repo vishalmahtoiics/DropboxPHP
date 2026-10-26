@@ -218,7 +218,7 @@ final class Elements
                     ]]],
                     'style' => [
                         ['label' => 'Button', 'controls' => array_merge([
-                            $flexAlign('{{W}}'),
+                            $flexAlign('{{W}} .bx-btn-wrap'),
                             C::c('color', 'text_color', 'Text colour', '', ['css' => ['{{W}} .bx-btn' => 'color:{{V}}']]),
                             C::c('color', 'bg', 'Background', '', ['css' => ['{{W}} .bx-btn' => 'background:{{V}}']]),
                             C::c('color', 'border_color', 'Border colour', '', ['css' => ['{{W}} .bx-btn' => 'border-color:{{V}}']]),
