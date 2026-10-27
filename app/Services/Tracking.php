@@ -14,7 +14,11 @@ use Throwable;
  * privileged and audited feature.
  *
  * With consent required, every tag is printed inert (type="text/plain") and
- * only activated by site.js after the visitor accepts.
+ * only activated by site.js after the visitor accepts. Google Tag Manager is the
+ * exception: it is printed live, in Google's standard form at the top of <head>
+ * (with its <noscript> fallback after <body>), behind Google Consent Mode
+ * defaults that deny storage until the visitor accepts. That keeps consent and
+ * lets tools that look for the container (Search Console verification) find it.
  */
 final class Tracking
 {
@@ -46,15 +50,35 @@ final class Tracking
         return '<script' . $type . ' nonce="' . e(nonce()) . '"' . $srcAttr . '>' . $js . '</script>';
     }
 
+    private static function gtmId(array $t): string
+    {
+        $id = (string) ($t['gtm_id'] ?? '');
+        return !empty($t['gtm_enabled']) && self::valid('gtm_id', $id) ? $id : '';
+    }
+
+    /** Printed first in <head>: Consent Mode defaults, then the Tag Manager container. */
+    public static function headTop(array $t, ?string $consent): string
+    {
+        $gtm = self::gtmId($t);
+        if ($gtm === '') {
+            return '';
+        }
+        $state = self::allowed($t, $consent) ? 'granted' : 'denied';
+        $consentJs = 'window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}'
+            . "gtag('consent','default',{ad_storage:'$state',ad_user_data:'$state',ad_personalization:'$state',analytics_storage:'$state'"
+            . ($state === 'denied' ? ',wait_for_update:500' : '') . '});';
+        // Google's container snippet, unchanged apart from the CSP nonce ('strict-dynamic' lets it load gtm.js).
+        return self::script($consentJs, true) . "\n<!-- Google Tag Manager -->\n"
+            . self::script("(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\nnew Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\nj=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=\n'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\n})(window,document,'script','dataLayer','" . $gtm . "');", true)
+            . "\n<!-- End Google Tag Manager -->\n";
+    }
+
     public static function head(array $t, ?string $consent): string
     {
         $on = self::allowed($t, $consent);
         $out = '';
         $id = static fn (string $k) => self::valid($k, (string) ($t[$k] ?? '')) ? (string) $t[$k] : '';
 
-        if ($t['gtm_enabled'] && ($gtm = $id('gtm_id'))) {
-            $out .= self::script("(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;var n=d.querySelector('script[nonce]');if(n)j.setAttribute('nonce',n.nonce||n.getAttribute('nonce'));f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer'," . js($gtm) . ');', $on);
-        }
         $gtagIds = array_values(array_filter([$t['ga4_enabled'] ? $id('ga4_id') : '', $t['google_ads_enabled'] ? $id('google_ads_id') : '']));
         if ($gtagIds) {
             $out .= self::script('', $on, 'https://www.googletagmanager.com/gtag/js?id=' . rawurlencode($gtagIds[0]));
@@ -84,7 +108,10 @@ final class Tracking
 
     public static function bodyStart(array $t, ?string $consent): string
     {
-        return self::custom('BODY_START', $t, $consent);
+        $gtm = self::gtmId($t);
+        $noscript = $gtm === '' ? '' : "<!-- Google Tag Manager (noscript) -->\n<noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=" . $gtm
+            . "\"\nheight=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>\n<!-- End Google Tag Manager (noscript) -->\n";
+        return $noscript . self::custom('BODY_START', $t, $consent);
     }
 
     public static function bodyEnd(array $t, ?string $consent): string

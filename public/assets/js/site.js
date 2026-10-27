@@ -230,6 +230,11 @@
       const secure = location.protocol === 'https:' ? '; Secure' : '';
       document.cookie = 'consent=' + value + '; Path=/; Max-Age=' + (180 * 86400) + '; SameSite=Lax' + secure;
       banner.hidden = true;
+      // Tag Manager runs under Consent Mode: tell it what the visitor chose.
+      if (typeof window.gtag === 'function') {
+        const v = value === 'granted' ? 'granted' : 'denied';
+        window.gtag('consent', 'update', { ad_storage: v, ad_user_data: v, ad_personalization: v, analytics_storage: v });
+      }
       if (value === 'granted') activateTags();
     }
     if (e.target.closest('[data-consent-open]') && banner) banner.hidden = false;
