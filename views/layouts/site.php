@@ -16,6 +16,7 @@ $canvas = !empty($builderCanvas);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <?= $canvas ? '' : Tracking::headTop($tracking, $consent) ?>
     <title><?= e($seo['title']) ?></title>
     <meta name="description" content="<?= e($seo['description']) ?>">
     <meta name="robots" content="<?= e($seo['robots']) ?>">
